@@ -1,56 +1,63 @@
 'use client';
 
+import { useState } from 'react';
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
-import { auth } from '@/firebase/config';
-import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { useRouter } from 'next/navigation';
+import { Menu, X } from 'lucide-react';
 
 export default function Navbar() {
-  const [user, setUser] = useState<any>(null);
-  const router = useRouter();
+  const [isOpen, setIsOpen] = useState(false);
+   // mock login state
 
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-    });
-    return () => unsubscribe();
-  }, []);
+  const toggleMenu = () => setIsOpen(!isOpen);
+ 
 
-  const handleLogout = async () => {
-    await signOut(auth);
-    router.push('/');
-  };
+  const navItems = [
+    { label: 'Home', href: '/' },
+    { label: 'Teachers', href: '/teachers' },
+    { label: 'About', href: '/about' },
+     { label: 'Login', href: '/login' },
+  ];
 
   return (
-    <nav className="bg-white shadow-md sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        <Link href="/" className="text-2xl font-bold text-blue-600">
-          School<span className="text-gray-800">Manager</span>
-        </Link>
-        <ul className="flex space-x-6 font-medium text-gray-700">
-          <li><Link href="/">Home</Link></li>
-          <li><Link href="/about">About</Link></li>
-          <li><Link href="/features">Features</Link></li>
-          <li><Link href="/contact">Contact</Link></li>
+    <nav className="bg-orange-600 text-white shadow-md">
+      <div className="max-w-7xl mx-auto flex items-center justify-between px-4 py-4">
+        <Link href="/" className="text-2xl font-bold">MySchool</Link>
+
+        {/* Desktop Menu */}
+        <ul className="hidden md:flex space-x-6 items-center">
+          {navItems.map((item) => (
+            <li key={item.href}>
+              <Link href={item.href} className="hover:text-yellow-300 transition">
+                {item.label}
+              </Link>
+            </li>
+          ))}
+         
         </ul>
-        <div>
-          {user ? (
-            <button
-              onClick={handleLogout}
-              className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
-            >
-              Logout
-            </button>
-          ) : (
-            <Link href="/login">
-              <button className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
-                Login
-              </button>
-            </Link>
-          )}
+
+        {/* Mobile Toggle */}
+        <div className="md:hidden">
+          <button onClick={toggleMenu}>{isOpen ? <X size={28} /> : <Menu size={28} />}</button>
         </div>
       </div>
+
+      {/* Mobile Menu */}
+      {isOpen && (
+        <ul className="md:hidden bg-orange-500 px-4 pb-4 space-y-2">
+          {navItems.map((item) => (
+            <li key={item.href}>
+              <Link
+                href={item.href}
+                className="block py-2 border-b border-orange-400 hover:text-yellow-200 transition"
+                onClick={() => setIsOpen(false)}
+              >
+                {item.label}
+              </Link>
+            </li>
+          ))}
+         
+        </ul>
+      )}
     </nav>
   );
 }
