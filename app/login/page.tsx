@@ -6,8 +6,10 @@ import {
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import { auth, db, googleProvider } from '@/firebase/config';
 import { Eye, EyeOff, LogIn, Loader2, UserPlus } from 'lucide-react';
+import logo from "./logo.png"
 
 export default function LoginPage() {
   const router = useRouter();
@@ -83,7 +85,7 @@ export default function LoginPage() {
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left Panel */}
       <div className="hidden md:flex flex-col justify-center items-center w-full md:w-1/2 bg-gradient-to-br from-blue-700 via-blue-500 to-indigo-600 text-white px-10 py-12 animate-slideInLeft">
-        <img src="/logo.png" alt="Logo" className="w-28 h-28 mb-6 rounded-full shadow-md" />
+          <Image src={logo} alt="EduPanel Logo" width={50} height={50} />
         <h1 className="text-4xl font-bold mb-2 text-center">Raaz School Management</h1>
         <p className="text-lg text-center max-w-md">
           Smart & Secure Dashboard for Students, Teachers, and Admins.

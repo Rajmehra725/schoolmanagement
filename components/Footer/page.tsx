@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { Github, Twitter, Linkedin } from 'lucide-react';
 import Image from 'next/image';
-
+import logo from './logo.png'
 export default function Footer() {
   return (
     <footer className="border-t shadow-sm bg-white dark:bg-gray-900 dark:border-gray-700">
@@ -10,8 +10,8 @@ export default function Footer() {
         {/* Branding */}
         <div>
           <div className="flex items-center space-x-2">
-            <Image src="/logo.png" alt="EduPanel Logo" width={32} height={32} />
-            <h2 className="text-xl font-bold text-orange-600 dark:text-orange-400">EduPanel</h2>
+            <Image src={logo} alt="EduPanel Logo" width={32} height={32} />
+            <h2 className="text-xl font-bold text-orange-600 dark:text-orange-400">Raaz EduTech</h2>
           </div>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
             Empowering education through technology.
@@ -49,7 +49,7 @@ export default function Footer() {
 
       {/* Bottom Bar */}
       <div className="border-t dark:border-gray-700 text-center py-4 text-sm text-gray-400 dark:text-gray-500">
-        © {new Date().getFullYear()} EduPanel. All rights reserved.
+        © {new Date().getFullYear()}  Raaz EduTech. All rights reserved.
       </div>
     </footer>
   );

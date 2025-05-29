@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     title: "School Management System",
     description: "Modern, secure, and efficient school management built with Next.js 13+.",
     url: "https://spsmanagement.vercel.app",
-    siteName: "SchoolMS",
+    siteName: " Raaz EduTech",
     images: [
       {
         url: "https://spsmanagement.vercel.app/og-image.jpg",
