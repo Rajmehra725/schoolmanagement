@@ -21,15 +21,15 @@ export const metadata: Metadata = {
   keywords: ["School Management System", "Next.js", "Firebase", "Attendance", "Students", "Teachers", "Fees"],
   authors: [{ name: "Raaz Mehra" }],
   creator: "Raaz Mehra",
-  metadataBase: new URL("https://yourdomain.com"),
+  metadataBase: new URL("https://spsmanagement.vercel.app"),
   openGraph: {
     title: "School Management System",
     description: "Modern, secure, and efficient school management built with Next.js 13+.",
-    url: "https://yourdomain.com",
+    url: "https://spsmanagement.vercel.app",
     siteName: "SchoolMS",
     images: [
       {
-        url: "https://yourdomain.com/og-image.jpg",
+        url: "https://spsmanagement.vercel.app/og-image.jpg",
         width: 1200,
         height: 630,
         alt: "School Management Dashboard",
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "School Management System",
     description: "Manage school records easily with Firebase and Next.js",
-    images: ["https://yourdomain.com/og-image.jpg"],
+    images: ["https://spsmanagement.vercel.app/og-image.jpg"],
   },
 };
 
