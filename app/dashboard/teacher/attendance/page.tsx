@@ -1,106 +1,161 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { collection, doc, getDocs, setDoc } from "firebase/firestore";
 import { db } from "@/firebase/config";
+import {
+  collection,
+  getDocs,
+  doc,
+  setDoc,
+  getDoc,
+  query,
+  where,
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
 
 interface Student {
   id: string;
   name: string;
+  class: string;
 }
 
-const AttendancePage = () => {
+export default function AttendancePage() {
   const [students, setStudents] = useState<Student[]>([]);
-  const [attendance, setAttendance] = useState<{ [key: string]: boolean }>({});
-  const [loading, setLoading] = useState(true);
+  const [presentIds, setPresentIds] = useState<string[]>([]);
+  const [selectedClass, setSelectedClass] = useState<string>("All");
+  const [selectedDate, setSelectedDate] = useState<string>(
+    new Date().toISOString().split("T")[0]
+  );
+  const [allClasses, setAllClasses] = useState<string[]>([]);
 
+  // Fetch students
   useEffect(() => {
     const fetchStudents = async () => {
-      try {
-        // Yahan bhi teacher id ke hisaab se fetch karein
-        const teacherId = "teacher123"; // example
-        const querySnapshot = await getDocs(collection(db, "students"));
-        const studentList: Student[] = [];
-        querySnapshot.forEach((doc) => {
-          // Example filter for assignedTeacherId
-          if (doc.data().assignedTeacherId === teacherId) {
-            studentList.push({ id: doc.id, name: doc.data().name });
-          }
-        });
-        setStudents(studentList);
-      } catch (error) {
-        console.error("Error fetching students for attendance:", error);
-      } finally {
-        setLoading(false);
-      }
+      const snapshot = await getDocs(collection(db, "students"));
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as Student[];
+      setStudents(data);
+      setAllClasses(["All", ...Array.from(new Set(data.map((s) => s.class)))]);
     };
     fetchStudents();
   }, []);
 
+  // Load attendance for selected date
+  useEffect(() => {
+    const fetchAttendance = async () => {
+      const attendanceIds: string[] = [];
+      for (const student of students) {
+        const docSnap = await getDoc(doc(db, "attendance", `${selectedDate}_${student.id}`));
+        if (docSnap.exists() && docSnap.data().status === "Present") {
+          attendanceIds.push(student.id);
+        }
+      }
+      setPresentIds(attendanceIds);
+    };
+    if (students.length) fetchAttendance();
+  }, [selectedDate, students]);
+
   const toggleAttendance = (id: string) => {
-    setAttendance((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+    setPresentIds((prev) =>
+      prev.includes(id) ? prev.filter((i) => i !== id) : [...prev, id]
+    );
   };
 
   const submitAttendance = async () => {
-    const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
-    try {
-      for (const studentId in attendance) {
-        const attendanceRef = doc(db, "attendance", `${studentId}_${today}`);
-        await setDoc(attendanceRef, {
-          studentId,
-          date: today,
-          present: attendance[studentId],
-          teacherId: "teacher123",
-        });
-      }
-      alert("Attendance submitted successfully!");
-    } catch (error) {
-      console.error("Error submitting attendance:", error);
-      alert("Failed to submit attendance.");
+    for (const student of filteredStudents) {
+      await setDoc(doc(db, "attendance", `${selectedDate}_${student.id}`), {
+        studentId: student.id,
+        date: selectedDate,
+        status: presentIds.includes(student.id) ? "Present" : "Absent",
+      });
+    }
+    alert("Attendance submitted!");
+  };
+
+  const markAll = (status: "Present" | "Absent") => {
+    if (status === "Present") {
+      setPresentIds(filteredStudents.map((s) => s.id));
+    } else {
+      setPresentIds([]);
     }
   };
 
-  if (loading) return <p className="p-6">Loading students...</p>;
+  const filteredStudents = selectedClass === "All"
+    ? students
+    : students.filter((s) => s.class === selectedClass);
 
   return (
-    <div className="p-6 max-w-lg mx-auto">
-      <h1 className="text-3xl font-bold mb-6">Mark Attendance</h1>
-      {students.length === 0 ? (
-        <p>No students assigned.</p>
-      ) : (
-        <>
-          <ul className="space-y-4">
-            {students.map((student) => (
-              <li
-                key={student.id}
-                className="flex items-center justify-between border p-3 rounded shadow"
-              >
-                <span>{student.name}</span>
-                <label className="flex items-center space-x-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={!!attendance[student.id]}
-                    onChange={() => toggleAttendance(student.id)}
-                    className="w-5 h-5"
-                  />
-                  <span>Present</span>
-                </label>
-              </li>
-            ))}
-          </ul>
-          <button
-            onClick={submitAttendance}
-            className="mt-6 bg-blue-600 text-white py-2 px-6 rounded hover:bg-blue-700"
+    <div className="p-4 max-w-3xl mx-auto">
+      <h1 className="text-2xl font-bold mb-4">📝 Mark Attendance</h1>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-4 mb-4 items-center">
+        <label className="block">
+          📚 Class:
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            className="ml-2 px-3 py-1 border rounded"
           >
-            Submit Attendance
+            {allClasses.map((cls) => (
+              <option key={cls} value={cls}>{cls}</option>
+            ))}
+          </select>
+        </label>
+
+        <label className="block">
+          📅 Date:
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="ml-2 px-3 py-1 border rounded"
+          />
+        </label>
+
+        <div className="flex gap-2">
+          <button
+            onClick={() => markAll("Present")}
+            className="px-4 py-1 bg-green-600 text-white rounded hover:bg-green-700"
+          >
+            Mark All Present
           </button>
-        </>
-      )}
+          <button
+            onClick={() => markAll("Absent")}
+            className="px-4 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+          >
+            Mark All Absent
+          </button>
+        </div>
+      </div>
+
+      {/* Students List */}
+      <ul className="space-y-2">
+        {filteredStudents.map((student) => (
+          <li
+            key={student.id}
+            className={`p-3 border rounded cursor-pointer transition-colors ${
+              presentIds.includes(student.id)
+                ? "bg-green-100 hover:bg-green-200"
+                : "bg-red-100 hover:bg-red-200"
+            }`}
+            onClick={() => toggleAttendance(student.id)}
+          >
+            <div className="flex justify-between">
+              <span>{student.name} ({student.class})</span>
+              <span className="font-semibold">
+                {presentIds.includes(student.id) ? "Present" : "Absent"}
+              </span>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {/* Submit */}
+      <button
+        onClick={submitAttendance}
+        className="mt-6 px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+      >
+        ✅ Submit Attendance
+      </button>
     </div>
   );
-};
-
-export default AttendancePage;
+}

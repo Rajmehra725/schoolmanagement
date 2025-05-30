@@ -138,7 +138,7 @@ export default function LoginPage() {
             <button onClick={() => router.push('/signup')} className="hover:underline flex items-center gap-1">
               <UserPlus size={14} /> Sign Up
             </button>
-            <button onClick={() => router.push('/forgot')} className="hover:underline">
+            <button onClick={() => router.push('/forgot-password')} className="hover:underline">
               Forgot Password?
             </button>
           </div>

@@ -1,76 +1,129 @@
+// app/dashboard/teacher/schedule/page.tsx
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "@/firebase/config";
+import {
+  collection,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc,
+  addDoc,
+} from "firebase/firestore";
+import { useEffect, useState } from "react";
 
-interface ScheduleItem {
-  id: string;
-  day: string;
-  time: string;
-  subject: string;
+interface ScheduleEntry {
+  id?: string;
   class: string;
+  subject: string;
+  time: string;
+  weekday: string;
 }
 
-const SchedulePage = () => {
-  const [schedule, setSchedule] = useState<ScheduleItem[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function SchedulePage() {
+  const [schedule, setSchedule] = useState<ScheduleEntry[]>([]);
+  const [form, setForm] = useState<ScheduleEntry>({
+    class: "",
+    subject: "",
+    time: "",
+    weekday: "",
+  });
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const fetchSchedule = async () => {
+    const querySnapshot = await getDocs(collection(db, "schedule"));
+    const data = querySnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })) as ScheduleEntry[];
+    setSchedule(data);
+  };
 
   useEffect(() => {
-    const fetchSchedule = async () => {
-      try {
-        const teacherId = "teacher123"; // Example
-        const q = query(
-          collection(db, "schedules"),
-          where("teacherId", "==", teacherId)
-        );
-        const querySnapshot = await getDocs(q);
-        const scheduleList: ScheduleItem[] = [];
-        querySnapshot.forEach((doc) => {
-          scheduleList.push({ id: doc.id, ...doc.data() } as ScheduleItem);
-        });
-        setSchedule(scheduleList);
-      } catch (error) {
-        console.error("Error fetching schedule:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchSchedule();
   }, []);
 
-  if (loading) return <p className="p-6">Loading schedule...</p>;
+  const handleDelete = async (id: string) => {
+    await deleteDoc(doc(db, "schedule", id));
+    fetchSchedule();
+  };
 
-  return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">My Schedule</h1>
-      {schedule.length === 0 ? (
-        <p>No schedule found.</p>
-      ) : (
-        <table className="w-full border border-gray-300 border-collapse">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border border-gray-300 p-2">Day</th>
-              <th className="border border-gray-300 p-2">Time</th>
-              <th className="border border-gray-300 p-2">Subject</th>
-              <th className="border border-gray-300 p-2">Class</th>
-            </tr>
-          </thead>
-          <tbody>
-            {schedule.map((item) => (
-              <tr key={item.id} className="hover:bg-gray-100">
-                <td className="border border-gray-300 p-2">{item.day}</td>
-                <td className="border border-gray-300 p-2">{item.time}</td>
-                <td className="border border-gray-300 p-2">{item.subject}</td>
-                <td className="border border-gray-300 p-2">{item.class}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
+  const handleEdit = (entry: ScheduleEntry) => {
+    setForm(entry);
+    setEditingId(entry.id!);
+  };
+
+  const handleSubmit = async () => {
+  if (!form.class || !form.subject || !form.time || !form.weekday) return;
+
+  // Create a new object without the 'id' key
+  const { id, ...formData } = form;
+
+  if (editingId) {
+    await updateDoc(doc(db, "schedule", editingId), formData);
+    setEditingId(null);
+  } else {
+    await addDoc(collection(db, "schedule"), formData);
+  }
+
+  setForm({ class: "", subject: "", time: "", weekday: "" });
+  fetchSchedule();
 };
 
-export default SchedulePage;
+  return (
+    <div className="p-4 space-y-4">
+      <h1 className="text-2xl font-semibold">Class Schedule</h1>
+
+      <div className="grid gap-2 md:grid-cols-5">
+        <input
+          placeholder="Class"
+          className="border p-2 rounded"
+          value={form.class}
+          onChange={(e) => setForm({ ...form, class: e.target.value })}
+        />
+        <input
+          placeholder="Subject"
+          className="border p-2 rounded"
+          value={form.subject}
+          onChange={(e) => setForm({ ...form, subject: e.target.value })}
+        />
+        <input
+          placeholder="Time"
+          className="border p-2 rounded"
+          value={form.time}
+          onChange={(e) => setForm({ ...form, time: e.target.value })}
+        />
+        <input
+          placeholder="Weekday"
+          className="border p-2 rounded"
+          value={form.weekday}
+          onChange={(e) => setForm({ ...form, weekday: e.target.value })}
+        />
+        <button
+          onClick={handleSubmit}
+          className="bg-blue-600 text-white p-2 rounded hover:bg-blue-700"
+        >
+          {editingId ? "Update" : "Add"}
+        </button>
+      </div>
+
+      <ul className="space-y-2">
+        {schedule.map((entry) => (
+          <li key={entry.id} className="p-4 bg-white shadow rounded border">
+            <p><strong>Class:</strong> {entry.class}</p>
+            <p><strong>Subject:</strong> {entry.subject}</p>
+            <p><strong>Time:</strong> {entry.time}</p>
+            <p><strong>Weekday:</strong> {entry.weekday}</p>
+            <div className="mt-2 flex gap-2">
+              <button
+                onClick={() => handleEdit(entry)}
+                className="px-3 py-1 bg-yellow-400 text-white rounded"
+              >Edit</button>
+              <button
+                onClick={() => handleDelete(entry.id!)}
+                className="px-3 py-1 bg-red-500 text-white rounded"
+              >Delete</button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
