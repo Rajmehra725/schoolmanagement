@@ -6,13 +6,15 @@ import { useEffect, useState } from 'react';
 import { getCurrentUser } from '@/lib/getCurrentUser';
 import { useRouter } from 'next/navigation';
 import {
-  User,
-  Users,
-  BookOpen,
-  CalendarDays,
-  LogOut,
   LayoutDashboard,
-  Menu
+  Users,
+  User,
+  BookOpen,
+  CalendarCheck,
+  Bell,
+  Menu,
+  LogOut,
+  Newspaper
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -32,12 +34,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [router]);
 
   const navItems = [
-    { label: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard },
-    { label: 'Students', href: '/dashboard/admin/students', icon: Users },
-    { label: 'Teachers', href: '/dashboard/admin/teachers', icon: User },
-    { label: 'Classes', href: '/dashboard/admin/classes', icon: BookOpen },
-    { label: 'Attendance', href: '/dashboard/admin/attendance', icon: CalendarDays }
-  ];
+  { label: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard },
+  { label: 'Students', href: '/dashboard/admin/students', icon: Users },
+  { label: 'Teachers', href: '/dashboard/admin/teachers', icon: User },
+  { label: 'Classes', href: '/dashboard/admin/classes', icon: BookOpen },
+  { label: 'Attendance', href: '/dashboard/admin/attendance', icon: CalendarCheck },
+  { label: 'Notification', href: '/dashboard/admin/notification', icon: Bell },
+  { label: 'Blog', href: '/dashboard/admin/blog', icon: Newspaper }
+];
 
   const handleLinkClick = () => {
     // Close menu on link click
