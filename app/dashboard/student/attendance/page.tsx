@@ -1,78 +1,97 @@
-"use client";
+'use client';
 
-import React, { useEffect, useState } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/firebase/config";
+import { useEffect, useState } from 'react';
+import { db } from '@/firebase/config';
+import { collection, getDocs } from 'firebase/firestore';
+import { motion } from 'framer-motion';
+import { Loader2, CheckCircle, XCircle, ArrowUpDown } from 'lucide-react';
+import { format } from 'date-fns';
 
-interface AttendanceRecord {
-  id: string;
-  date: string;
-  present: boolean;
-}
-
-const AttendancePage = () => {
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+export default function AttendancePage() {
+  const [records, setRecords] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortAsc, setSortAsc] = useState(true);
 
   useEffect(() => {
     const fetchAttendance = async () => {
       try {
-        const studentId = "student123"; // Example, auth se le sakte hain
-        const q = query(
-          collection(db, "attendance"),
-          where("studentId", "==", studentId)
-        );
-        const querySnapshot = await getDocs(q);
-        const records: AttendanceRecord[] = [];
-        querySnapshot.forEach((doc) => {
-          records.push({ id: doc.id, ...doc.data() } as AttendanceRecord);
-        });
-        // Sort by date descending
-        records.sort((a, b) => (a.date < b.date ? 1 : -1));
-        setAttendance(records);
+        const snapshot = await getDocs(collection(db, 'attendance'));
+        const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setRecords(data);
       } catch (error) {
-        console.error("Error fetching attendance:", error);
+        console.error('Error fetching attendance:', error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchAttendance();
   }, []);
 
-  if (loading) return <p className="p-6">Loading attendance records...</p>;
+  // Sort records by date
+  const sortedRecords = [...records].sort((a, b) => {
+    const dateA = new Date(a.date);
+    const dateB = new Date(b.date);
+    return sortAsc ? dateA.getTime() - dateB.getTime() : dateB.getTime() - dateA.getTime();
+  });
 
   return (
-    <div className="p-6 max-w-lg mx-auto">
-      <h1 className="text-3xl font-bold mb-6">My Attendance</h1>
-      {attendance.length === 0 ? (
-        <p>No attendance records found.</p>
-      ) : (
-        <table className="w-full border border-gray-300 border-collapse">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border border-gray-300 p-2">Date</th>
-              <th className="border border-gray-300 p-2">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {attendance.map((record) => (
-              <tr key={record.id} className="hover:bg-gray-100">
-                <td className="border border-gray-300 p-2">{record.date}</td>
-                <td
-                  className={`border border-gray-300 p-2 font-semibold ${
-                    record.present ? "text-green-600" : "text-red-600"
-                  }`}
-                >
-                  {record.present ? "Present" : "Absent"}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
-  );
-};
+    <motion.div
+      initial={{ y: 20, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      className="p-6 min-h-screen bg-gray-50"
+    >
+      <h1 className="text-3xl font-bold mb-6 text-center text-blue-800">📅 Attendance Record</h1>
 
-export default AttendancePage;
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <Loader2 className="animate-spin h-10 w-10 text-blue-600" />
+        </div>
+      ) : sortedRecords.length === 0 ? (
+        <p className="text-center text-gray-500">No attendance records found.</p>
+      ) : (
+        <div className="overflow-x-auto shadow-xl rounded-xl bg-white">
+          <table className="min-w-full table-auto border-collapse text-sm">
+            <thead className="bg-blue-100 text-blue-900">
+              <tr>
+                <th
+                  onClick={() => setSortAsc(!sortAsc)}
+                  className="border px-6 py-3 text-left cursor-pointer select-none flex items-center gap-1"
+                >
+                  Date <ArrowUpDown className="w-4 h-4" />
+                </th>
+                <th className="border px-6 py-3 text-left">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {sortedRecords.map(rec => (
+                <motion.tr
+                  key={rec.id}
+                  className="hover:bg-blue-50 transition-all even:bg-blue-50"
+                  initial={{ opacity: 0, y: 5 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.15 }}
+                >
+                  <td className="border px-6 py-4 font-medium text-gray-700">
+                    {format(new Date(rec.date), 'dd MMM yyyy')}
+                  </td>
+                  <td
+                    className={`border px-6 py-4 font-semibold flex items-center gap-2 ${
+                      rec.status === 'Present' ? 'text-green-600' : 'text-red-500'
+                    }`}
+                  >
+                    {rec.status === 'Present' ? (
+                      <CheckCircle className="w-5 h-5" />
+                    ) : (
+                      <XCircle className="w-5 h-5" />
+                    )}
+                    {rec.status}
+                  </td>
+                </motion.tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </motion.div>
+  );
+}

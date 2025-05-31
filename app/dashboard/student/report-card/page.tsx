@@ -1,76 +1,34 @@
-"use client";
+'use client'
 
-import React, { useEffect, useState } from "react";
-import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "@/firebase/config";
+import { useEffect, useState } from 'react';
+import { db } from '@/firebase/config';
+import { collection, getDocs } from 'firebase/firestore';
+import { motion } from 'framer-motion';
 
-interface ReportCardItem {
-  id: string;
-  subject: string;
-  marksObtained: number;
-  totalMarks: number;
-  grade: string;
-}
-
-const ReportCardPage = () => {
-  const [reportCards, setReportCards] = useState<ReportCardItem[]>([]);
-  const [loading, setLoading] = useState(true);
+export default function ReportCardPage() {
+  const [reports, setReports] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchReportCards = async () => {
-      try {
-        const studentId = "student123"; // Example, auth se le sakte hain
-        const q = query(
-          collection(db, "reportCards"),
-          where("studentId", "==", studentId)
-        );
-        const querySnapshot = await getDocs(q);
-        const cards: ReportCardItem[] = [];
-        querySnapshot.forEach((doc) => {
-          cards.push({ id: doc.id, ...doc.data() } as ReportCardItem);
-        });
-        setReportCards(cards);
-      } catch (error) {
-        console.error("Error fetching report cards:", error);
-      } finally {
-        setLoading(false);
-      }
+    const fetchReportCard = async () => {
+      const snapshot = await getDocs(collection(db, 'reportCards'));
+      const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setReports(data);
     };
-
-    fetchReportCards();
+    fetchReportCard();
   }, []);
 
-  if (loading) return <p className="p-6">Loading report card...</p>;
-
   return (
-    <div className="p-6 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-6">My Report Card</h1>
-      {reportCards.length === 0 ? (
-        <p>No report card data found.</p>
-      ) : (
-        <table className="w-full border border-gray-300 border-collapse">
-          <thead>
-            <tr className="bg-gray-200">
-              <th className="border border-gray-300 p-2">Subject</th>
-              <th className="border border-gray-300 p-2">Marks Obtained</th>
-              <th className="border border-gray-300 p-2">Total Marks</th>
-              <th className="border border-gray-300 p-2">Grade</th>
-            </tr>
-          </thead>
-          <tbody>
-            {reportCards.map((card) => (
-              <tr key={card.id} className="hover:bg-gray-100">
-                <td className="border border-gray-300 p-2">{card.subject}</td>
-                <td className="border border-gray-300 p-2">{card.marksObtained}</td>
-                <td className="border border-gray-300 p-2">{card.totalMarks}</td>
-                <td className="border border-gray-300 p-2">{card.grade}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
-    </div>
+    <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="p-6">
+      <h1 className="text-2xl font-bold mb-4">Report Card</h1>
+      <div className="space-y-4">
+        {reports.map(report => (
+          <div key={report.id} className="bg-white shadow-md rounded-xl p-4">
+            <h2 className="font-semibold text-lg">{report.subject}</h2>
+            <p className="text-gray-600">Marks: {report.marks}</p>
+            <p className="text-gray-500">Grade: {report.grade}</p>
+          </div>
+        ))}
+      </div>
+    </motion.div>
   );
-};
-
-export default ReportCardPage;
+}

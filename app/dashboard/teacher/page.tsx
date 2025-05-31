@@ -59,40 +59,26 @@ export default function TeacherDashboard() {
     );
 
   return (
-    <div className="p-6 max-w-4xl mx-auto bg-gray-50 rounded-xl shadow-md">
-      <h1 className="text-3xl font-bold text-green-700 mb-6 text-center">
+    <div className="p-4 sm:p-6 max-w-5xl mx-auto bg-gray-50 rounded-xl shadow-md">
+      <h1 className="text-2xl sm:text-3xl font-bold text-green-700 mb-6 text-center">
         👨‍🏫 Teacher Dashboard
       </h1>
 
-      <div className="bg-white rounded-xl shadow p-6 border mb-6 flex flex-col sm:flex-row gap-6 items-center">
+      <div className="bg-white rounded-xl shadow p-4 sm:p-6 border mb-6 flex flex-col sm:flex-row gap-6 items-center sm:items-start">
         <img
           src={user.photoUrl || "/default-avatar.png"}
           alt={user.name ? `${user.name}'s photo` : "User photo"}
-          className="w-32 h-32 rounded-full object-cover border-4 border-green-600"
+          className="w-28 h-28 sm:w-32 sm:h-32 rounded-full object-cover border-4 border-green-600"
         />
 
-        <div className="flex-1 text-gray-700 space-y-2">
-          <p>
-            <strong>Name:</strong> {user.name || "N/A"}
-          </p>
-          <p>
-            <strong>Email:</strong> {user.email || "N/A"}
-          </p>
-          <p>
-            <strong>Father's Name:</strong> {user.fatherName || "N/A"}
-          </p>
-          <p>
-            <strong>Mobile:</strong> {user.mobile || user.phone || "N/A"}
-          </p>
-          <p>
-            <strong>Qualification:</strong> {user.qualification || "N/A"}
-          </p>
-          <p>
-            <strong>Subject:</strong> {user.subject || "N/A"}
-          </p>
-          <p>
-            <strong>Role:</strong> {user.role || "N/A"}
-          </p>
+        <div className="flex-1 text-gray-700 space-y-2 text-sm sm:text-base w-full">
+          <p><strong>Name:</strong> {user.name || "N/A"}</p>
+          <p><strong>Email:</strong> {user.email || "N/A"}</p>
+          <p><strong>Father's Name:</strong> {user.fatherName || "N/A"}</p>
+          <p><strong>Mobile:</strong> {user.mobile || user.phone || "N/A"}</p>
+          <p><strong>Qualification:</strong> {user.qualification || "N/A"}</p>
+          <p><strong>Subject:</strong> {user.subject || "N/A"}</p>
+          <p><strong>Role:</strong> {user.role || "N/A"}</p>
           {user.resumeUrl && (
             <p>
               <strong>Resume:</strong>{" "}
@@ -113,7 +99,7 @@ export default function TeacherDashboard() {
       <div className="text-center">
         <button
           onClick={handleLogout}
-          className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg shadow"
+          className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 sm:py-3 rounded-lg shadow w-full sm:w-auto"
           aria-label="Logout"
         >
           🚪 Logout

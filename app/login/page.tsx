@@ -1,15 +1,14 @@
 'use client';
+
 import { useState } from 'react';
-import {
-  signInWithEmailAndPassword,
-  signInWithPopup,
-} from 'firebase/auth';
+import { signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { auth, db, googleProvider } from '@/firebase/config';
 import { Eye, EyeOff, LogIn, Loader2, UserPlus } from 'lucide-react';
-import logo from "./logo.png"
+import logo from './logo.png';
+import { SiGoogle } from 'react-icons/si';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -21,7 +20,7 @@ export default function LoginPage() {
 
   const validateForm = () => {
     if (!email.includes('@') || password.length < 6) {
-      setError('Enter a valid email and password (min 6 chars)');
+      setError('Enter a valid email and password (min 6 characters)');
       return false;
     }
     return true;
@@ -35,6 +34,14 @@ export default function LoginPage() {
     setLoading(true);
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const token = await userCredential.user.getIdToken();
+
+      await fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+
       const userId = userCredential.user.uid;
       const userDoc = await getDoc(doc(db, 'users', userId));
       const role = userDoc.data()?.role;
@@ -56,15 +63,21 @@ export default function LoginPage() {
     try {
       const result = await signInWithPopup(auth, googleProvider);
       const user = result.user;
+      const token = await user.getIdToken();
 
-      // Check if user doc exists
+      await fetch('/api/session', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+
       const userRef = doc(db, 'users', user.uid);
       const userSnap = await getDoc(userRef);
 
       if (!userSnap.exists()) {
         await setDoc(userRef, {
           email: user.email,
-          role: 'student', // Default role, or based on logic
+          role: 'student',
         });
       }
 
@@ -84,26 +97,28 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left Panel */}
-      <div className="hidden md:flex flex-col justify-center items-center w-full md:w-1/2 bg-gradient-to-br from-blue-700 via-blue-500 to-indigo-600 text-white px-10 py-12 animate-slideInLeft">
-          <Image src={logo} alt="EduPanel Logo" width={50} height={50} />
-        <h1 className="text-4xl font-bold mb-2 text-center">Raaz School Management</h1>
-        <p className="text-lg text-center max-w-md">
-          Smart & Secure Dashboard for Students, Teachers, and Admins.
+      <div className="hidden md:flex flex-col justify-center items-center w-full md:w-1/2 bg-gradient-to-br from-blue-700 via-blue-500 to-indigo-600 text-white px-10 py-12">
+        <Image src={logo} alt="Raaz Edu Logo" width={80} height={80} />
+        <h1 className="text-4xl font-bold mt-4 text-center">Raaz School Management</h1>
+        <p className="text-lg mt-4 text-center max-w-md">
+          A smart & secure dashboard experience for Students, Teachers, and Admins.
         </p>
       </div>
 
-      {/* Login Form */}
-      <div className="flex flex-col justify-center items-center w-full md:w-1/2 bg-gray-100 px-6 py-12 animate-fadeIn">
-        <div className="bg-white p-8 rounded-xl shadow-xl w-full max-w-md">
+      {/* Right Panel - Login Form */}
+      <div className="w-full md:w-1/2 flex justify-center items-center bg-gray-50 px-6 py-12">
+        <div className="w-full max-w-md bg-white p-8 rounded-2xl shadow-lg">
           <h2 className="text-3xl font-bold text-center text-blue-700 mb-6">Welcome Back</h2>
+
           {error && <p className="text-red-600 text-center mb-4">{error}</p>}
+
           <form onSubmit={handleLogin} className="space-y-4">
             <input
               type="email"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-3 border border-gray-300 rounded-lg"
+              className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
               required
             />
             <div className="relative">
@@ -112,7 +127,7 @@ export default function LoginPage() {
                 placeholder="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full p-3 border border-gray-300 rounded-lg"
+                className="w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-400"
                 required
               />
               <button
@@ -145,7 +160,7 @@ export default function LoginPage() {
 
           <div className="my-4 flex items-center gap-2">
             <div className="h-px flex-1 bg-gray-300" />
-            <span className="text-gray-400 text-sm">or</span>
+            <span className="text-gray-500 text-sm">OR</span>
             <div className="h-px flex-1 bg-gray-300" />
           </div>
 
@@ -154,7 +169,7 @@ export default function LoginPage() {
             onClick={handleGoogleLogin}
             className="w-full border border-gray-300 py-2 rounded-lg flex items-center justify-center gap-2 hover:bg-gray-100 transition"
           >
-            <img src="/google.svg" alt="Google" className="w-5 h-5" />
+           <SiGoogle className="w-5 h-5 text-red-500" />
             <span className="text-sm font-medium">Continue with Google</span>
           </button>
         </div>

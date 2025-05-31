@@ -99,7 +99,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             className="flex items-center gap-2 text-red-600 mt-2 hover:underline"
             onClick={() => {
               localStorage.removeItem('user');
-              router.push('/login');
+              router.push('/logout');
             }}
           >
             <LogOut className="w-4 h-4" />
