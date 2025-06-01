@@ -17,7 +17,6 @@ export default function Navbar() {
     { label: 'Courses', href: '/courses' },
     { label: 'About', href: '/about' },
      { label: 'Daily Updates', href: '/blog' },
-      { label: 'Notification', href: '/notification' },
      { label: 'Login', href: '/login' },
   ];
 

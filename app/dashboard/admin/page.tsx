@@ -5,12 +5,13 @@ import { getCurrentUser } from "@/lib/getCurrentUser";
 import { db, auth } from "@/firebase/config";
 import {
   collection,
-  getDocs,
   query,
   where,
   updateDoc,
   doc,
   deleteDoc,
+  onSnapshot,
+  getDocs,
 } from "firebase/firestore";
 import {
   signOut,
@@ -25,36 +26,28 @@ type AppUser = {
   email: string;
   role: string;
   photoURL?: string;
-  // No password here for security
 };
 
 export default function AdminDashboard() {
-  // Firebase authenticated user (from auth)
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-
-  // App user data (role, photoURL, etc.) from Firestore
   const [appUser, setAppUser] = useState<AppUser | null>(null);
 
-  // All users list
   const [users, setUsers] = useState<AppUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [showUsers, setShowUsers] = useState(false);
 
-  // Editing user states
   const [editUserId, setEditUserId] = useState<string | null>(null);
   const [editUserData, setEditUserData] = useState<Partial<AppUser>>({});
 
-  // Own password change states
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [passwordChangeStatus, setPasswordChangeStatus] = useState<string | null>(null);
 
   // Fetch current Firebase user and their app data
   useEffect(() => {
-    auth.onAuthStateChanged(async (user) => {
+    const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
       if (user) {
         setFirebaseUser(user);
-        // Fetch this user's Firestore document by email or uid
         const usersSnap = await getDocs(
           query(collection(db, "users"), where("email", "==", user.email))
         );
@@ -67,44 +60,48 @@ export default function AdminDashboard() {
         setAppUser(null);
       }
     });
+    return () => unsubscribeAuth();
   }, []);
 
-  // Fetch all users from Firestore
-  async function fetchUsers() {
-    setLoadingUsers(true);
-    try {
-      const usersSnap = await getDocs(collection(db, "users"));
-      const usersList: AppUser[] = usersSnap.docs.map((doc) => ({
-        id: doc.id,
-        ...(doc.data() as Omit<AppUser, "id">),
-      }));
-      setUsers(usersList);
-    } catch (error) {
-      console.error("Error fetching users:", error);
-    } finally {
-      setLoadingUsers(false);
-    }
-  }
+  // Real-time listener for all users when showUsers is true
+  useEffect(() => {
+    if (!showUsers) return;
 
-  // Show users panel and load users
+    setLoadingUsers(true);
+    const usersQuery = collection(db, "users");
+    const unsubscribe = onSnapshot(
+      usersQuery,
+      (snapshot) => {
+        const updatedUsers: AppUser[] = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as Omit<AppUser, "id">),
+        }));
+        setUsers(updatedUsers);
+        setLoadingUsers(false);
+      },
+      (error) => {
+        console.error("Real-time user fetch error:", error);
+        setLoadingUsers(false);
+      }
+    );
+
+    return () => unsubscribe();
+  }, [showUsers]);
+
   function handleManageUsersClick() {
     setShowUsers(true);
-    fetchUsers();
   }
 
-  // Delete user with confirmation
   async function handleDeleteUser(userId: string) {
     if (!confirm("Are you sure you want to delete this user?")) return;
     try {
       await deleteDoc(doc(db, "users", userId));
-      setUsers(users.filter((u) => u.id !== userId));
       alert("User deleted");
     } catch (error) {
       alert("Failed to delete user: " + error);
     }
   }
 
-  // Start editing a user
   function startEditUser(user: AppUser) {
     setEditUserId(user.id);
     setEditUserData({
@@ -114,13 +111,11 @@ export default function AdminDashboard() {
     });
   }
 
-  // Cancel editing
   function cancelEdit() {
     setEditUserId(null);
     setEditUserData({});
   }
 
-  // Save edited user (Firestore only)
   async function saveEditUser() {
     if (!editUserId) return;
     try {
@@ -130,7 +125,6 @@ export default function AdminDashboard() {
         role: editUserData.role,
         photoURL: editUserData.photoURL,
       });
-      setUsers(users.map((u) => (u.id === editUserId ? { ...u, ...editUserData } as AppUser : u)));
       setEditUserId(null);
       setEditUserData({});
       alert("User updated");
@@ -139,7 +133,6 @@ export default function AdminDashboard() {
     }
   }
 
-  // Change own password securely
   async function handleChangePassword() {
     setPasswordChangeStatus(null);
     if (!firebaseUser || !firebaseUser.email) {
@@ -152,9 +145,7 @@ export default function AdminDashboard() {
     }
     try {
       const credential = EmailAuthProvider.credential(firebaseUser.email, oldPassword);
-      // Reauthenticate
       await reauthenticateWithCredential(firebaseUser, credential);
-      // Update password
       await updatePassword(firebaseUser, newPassword);
       setPasswordChangeStatus("Password changed successfully!");
       setOldPassword("");
@@ -165,46 +156,47 @@ export default function AdminDashboard() {
   }
 
   if (!firebaseUser || !appUser)
-    return <p className="text-center mt-10">Loading user info...</p>;
+    return <p className="text-center mt-10 animate-fadeIn">Loading user info...</p>;
 
-  // Count active users (for example, users with role 'user' or 'admin')
   const activeUsersCount = users.length;
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-8">
+    <div className="p-8 max-w-7xl mx-auto space-y-12">
       {/* Admin Profile & Welcome */}
-      <div className="flex items-center space-x-4">
+      <div className="flex items-center space-x-6 animate-fadeIn">
         {appUser.photoURL ? (
           <img
             src={appUser.photoURL}
             alt="Profile"
-            className="w-16 h-16 rounded-full object-cover border-2 border-blue-600"
+            className="w-20 h-20 rounded-full object-cover border-4 border-blue-600 shadow-lg"
           />
         ) : (
-          <div className="w-16 h-16 rounded-full bg-gray-300 flex items-center justify-center text-xl font-bold text-gray-700 border-2 border-blue-600">
+          <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center text-3xl font-bold text-gray-700 border-4 border-blue-600 shadow-lg">
             {appUser.email.charAt(0).toUpperCase()}
           </div>
         )}
         <div>
-          <p className="text-xl font-semibold">Welcome, {appUser.email}</p>
-          <p className="text-gray-600">Role: {appUser.role}</p>
-          <p className="mt-1 font-semibold text-blue-600">
+          <p className="text-3xl font-extrabold tracking-wide text-gray-900">
+            Welcome, {appUser.email}
+          </p>
+          <p className="text-gray-600 mt-1 text-lg font-semibold">Role: {appUser.role}</p>
+          <p className="mt-2 font-semibold text-blue-700 text-xl">
             Active Users: {activeUsersCount}
           </p>
         </div>
       </div>
 
       {/* Navigation */}
-      <nav className="mb-6 space-x-4">
+      <nav className="mb-8 space-x-6">
         <button
           onClick={handleManageUsersClick}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition transform hover:scale-105"
         >
           Manage Users
         </button>
         <button
           onClick={() => signOut(auth)}
-          className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+          className="px-6 py-3 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition transform hover:scale-105"
         >
           Sign Out
         </button>
@@ -212,28 +204,33 @@ export default function AdminDashboard() {
 
       {/* Users Table */}
       {showUsers && (
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">Users List</h2>
+        <section className="animate-fadeIn">
+          <h2 className="text-3xl font-semibold mb-6 border-b border-gray-300 pb-2">
+            Users List
+          </h2>
           {loadingUsers ? (
-            <p>Loading users...</p>
+            <p className="text-center text-lg font-medium text-gray-700">Loading users...</p>
           ) : users.length === 0 ? (
-            <p>No users found.</p>
+            <p className="text-center text-lg font-medium text-gray-700">No users found.</p>
           ) : (
-            <div className="overflow-x-auto border rounded">
+            <div className="overflow-x-auto rounded-lg shadow-lg border border-gray-300">
               <table className="min-w-full table-auto border-collapse border">
-                <thead className="bg-gray-100">
+                <thead className="bg-blue-100 text-blue-900 uppercase tracking-wide font-semibold text-sm select-none">
                   <tr>
-                    <th className="border px-4 py-2">Photo</th>
-                    <th className="border px-4 py-2">Email</th>
-                    <th className="border px-4 py-2">Role</th>
-                    <th className="border px-4 py-2">Actions</th>
+                    <th className="border px-6 py-3">Photo</th>
+                    <th className="border px-6 py-3">Email</th>
+                    <th className="border px-6 py-3">Role</th>
+                    <th className="border px-6 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {users.map((u) =>
                     editUserId === u.id ? (
-                      <tr key={u.id} className="bg-yellow-50">
-                        <td className="border px-4 py-2">
+                      <tr
+                        key={u.id}
+                        className="bg-yellow-50 border-t border-yellow-400 transition-all duration-300 ease-in-out"
+                      >
+                        <td className="border px-4 py-3">
                           <input
                             type="text"
                             value={editUserData.photoURL || ""}
@@ -241,73 +238,76 @@ export default function AdminDashboard() {
                               setEditUserData({ ...editUserData, photoURL: e.target.value })
                             }
                             placeholder="Photo URL"
-                            className="w-full border rounded p-1"
+                            className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-400 transition"
                           />
                         </td>
-                        <td className="border px-4 py-2">
+                        <td className="border px-4 py-3">
                           <input
                             type="email"
                             value={editUserData.email || ""}
                             onChange={(e) =>
                               setEditUserData({ ...editUserData, email: e.target.value })
                             }
-                            className="w-full border rounded p-1"
+                            className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-400 transition"
                           />
                         </td>
-                        <td className="border px-4 py-2">
+                        <td className="border px-4 py-3">
                           <select
                             value={editUserData.role || ""}
                             onChange={(e) =>
                               setEditUserData({ ...editUserData, role: e.target.value })
                             }
-                            className="w-full border rounded p-1"
+                            className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-400 transition"
                           >
                             <option value="admin">Admin</option>
                             <option value="user">User</option>
                           </select>
                         </td>
-                        <td className="border px-4 py-2 space-x-2">
+                        <td className="border px-4 py-3 space-x-3 text-center">
                           <button
                             onClick={saveEditUser}
-                            className="bg-green-600 text-white px-3 py-1 rounded hover:bg-green-700"
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded transition transform hover:scale-105"
                           >
                             Save
                           </button>
                           <button
                             onClick={cancelEdit}
-                            className="bg-gray-400 text-white px-3 py-1 rounded hover:bg-gray-500"
+                            className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-1 rounded transition transform hover:scale-105"
                           >
                             Cancel
                           </button>
                         </td>
                       </tr>
                     ) : (
-                      <tr key={u.id}>
-                        <td className="border px-4 py-2 text-center">
+                      <tr
+                        key={u.id}
+                        className="hover:bg-blue-50 cursor-pointer transition-colors"
+                      >
+                        <td className="border px-6 py-4 text-center">
                           {u.photoURL ? (
                             <img
                               src={u.photoURL}
-                              alt="User"
-                              className="w-10 h-10 rounded-full object-cover mx-auto"
+                              alt="User Photo"
+                              className="w-12 h-12 rounded-full object-cover mx-auto"
                             />
                           ) : (
-                            <div className="w-10 h-10 rounded-full bg-gray-300 mx-auto flex items-center justify-center text-sm font-bold text-gray-700">
+                            <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center mx-auto text-gray-700 font-semibold">
                               {u.email.charAt(0).toUpperCase()}
                             </div>
                           )}
                         </td>
-                        <td className="border px-4 py-2">{u.email}</td>
-                        <td className="border px-4 py-2 capitalize">{u.role}</td>
-                        <td className="border px-4 py-2 space-x-2 text-center">
+                        <td className="border px-6 py-4 break-words max-w-xs">{u.email}</td>
+                        <td className="border px-6 py-4 capitalize">{u.role}</td>
+                        <td className="border px-6 py-4 space-x-3 text-center whitespace-nowrap">
                           <button
                             onClick={() => startEditUser(u)}
-                            className="bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700"
+                            className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-4 py-1 rounded transition transform hover:scale-105"
                           >
                             Edit
                           </button>
                           <button
                             onClick={() => handleDeleteUser(u.id)}
-                            className="bg-red-600 text-white px-3 py-1 rounded hover:bg-red-700"
+                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded transition transform hover:scale-105"
                           >
                             Delete
                           </button>
@@ -322,41 +322,51 @@ export default function AdminDashboard() {
         </section>
       )}
 
-      {/* Change Password (only for current logged in user) */}
-      <section className="max-w-md p-4 border rounded space-y-3">
-        <h2 className="text-xl font-semibold">Change Your Password</h2>
-        <input
-          type="password"
-          placeholder="Old Password"
-          value={oldPassword}
-          onChange={(e) => setOldPassword(e.target.value)}
-          className="w-full border rounded p-2"
-        />
-        <input
-          type="password"
-          placeholder="New Password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          className="w-full border rounded p-2"
-        />
-        <button
-          onClick={handleChangePassword}
-          className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
-        >
-          Change Password
-        </button>
-        {passwordChangeStatus && (
-          <p
-            className={`mt-2 ${
-              passwordChangeStatus.includes("successfully")
-                ? "text-green-700"
-                : "text-red-700"
-            }`}
+      {/* Password Change Section */}
+      <section className="max-w-md p-6 border rounded-lg shadow-md bg-white animate-fadeIn">
+        <h3 className="text-2xl font-semibold mb-4 border-b pb-2">Change Password</h3>
+        <div className="space-y-4">
+          <input
+            type="password"
+            placeholder="Old Password"
+            value={oldPassword}
+            onChange={(e) => setOldPassword(e.target.value)}
+            className="w-full border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          />
+          <input
+            type="password"
+            placeholder="New Password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            className="w-full border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+          />
+          <button
+            onClick={handleChangePassword}
+            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition transform hover:scale-105"
           >
-            {passwordChangeStatus}
-          </p>
-        )}
+            Change Password
+          </button>
+          {passwordChangeStatus && (
+            <p
+              className={`mt-2 text-center font-semibold ${
+                passwordChangeStatus.includes("successfully") ? "text-green-600" : "text-red-600"
+              }`}
+            >
+              {passwordChangeStatus}
+            </p>
+          )}
+        </div>
       </section>
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {opacity: 0;}
+          to {opacity: 1;}
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.6s ease forwards;
+        }
+      `}</style>
     </div>
   );
 }

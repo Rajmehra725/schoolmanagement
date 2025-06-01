@@ -12,7 +12,7 @@ import {
   NotebookText	,
   LogOut,
   Menu,
-  X
+  X, Bell
 } from 'lucide-react';
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
@@ -35,7 +35,8 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { label: 'My Students', href: '/dashboard/teacher/students', icon: Users },
     { label: 'Mark Attendance', href: '/dashboard/teacher/attendance', icon: CalendarCheck },
     { label: 'Schedule', href: '/dashboard/teacher/schedule', icon: CalendarDays },
-    { label: 'Syllabus-Tracker', href: '/dashboard/teacher/syllabus-tracker', icon: NotebookText	 }
+    { label: 'Syllabus-Tracker', href: '/dashboard/teacher/syllabus-tracker', icon: NotebookText	 },
+    { label: 'Notification', href: '/dashboard/teacher/notification', icon: Bell	 }
   ];
 
   if (!user) {
