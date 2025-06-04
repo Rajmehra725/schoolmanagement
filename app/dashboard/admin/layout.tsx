@@ -14,7 +14,8 @@ import {
   Bell,
   Menu,
   LogOut,
-  Newspaper
+  Newspaper,
+  MessageCircleHeartIcon
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -40,7 +41,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   { label: 'Classes', href: '/dashboard/admin/classes', icon: BookOpen },
   { label: 'Attendance', href: '/dashboard/admin/attendance', icon: CalendarCheck },
   { label: 'Notification', href: '/dashboard/admin/notification', icon: Bell },
-  { label: 'Blog', href: '/dashboard/admin/blog', icon: Newspaper }
+  { label: 'Blog', href: '/dashboard/admin/blog', icon: Newspaper },
+  { label: 'Chat', href: '/dashboard/admin/chat', icon: MessageCircleHeartIcon }
 ];
 
   const handleLinkClick = () => {

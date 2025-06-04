@@ -75,7 +75,7 @@ export default function StudentDashboard() {
   if (!userData) return <p className="text-center mt-10 animate-pulse text-gray-500">Loading...</p>;
 
   return (
-    <div className="p-6 max-w-5xl mx-auto text-gray-800">
+    <div className="p-4 w-full text-gray-800">
       {/* Header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
@@ -84,8 +84,7 @@ export default function StudentDashboard() {
         className="flex items-center space-x-6 mb-6"
       >
         <img
-          src={userData.photoUrl
- || ''}
+          src={userData.photoUrl || ''}
           alt="Profile"
           className="w-24 h-24 rounded-full border-4 border-purple-300 shadow-lg object-cover"
         />
@@ -111,7 +110,7 @@ export default function StudentDashboard() {
         ))}
       </div>
 
-      {/* Animated Panels */}
+      {/* Content */}
       <div className="bg-white rounded-lg shadow p-6 overflow-hidden">
         <AnimatePresence mode="wait">
           {tab === 'personal' && (
@@ -180,7 +179,7 @@ export default function StudentDashboard() {
             >
               <h2 className="text-xl font-semibold mb-4">Results</h2>
               {results.length > 0 ? (
-                results.map((term: Record<string, any>) => (
+                results.map((term) => (
                   <div key={term.id} className="mb-4">
                     <h3 className="text-purple-700 font-bold">{term.id}</h3>
                     <ul className="list-disc ml-6">

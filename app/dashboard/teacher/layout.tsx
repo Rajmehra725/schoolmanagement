@@ -12,7 +12,8 @@ import {
   NotebookText	,
   LogOut,
   Menu,
-  X, Bell
+  X, Bell ,
+  MessageSquareHeartIcon
 } from 'lucide-react';
 
 export default function TeacherLayout({ children }: { children: React.ReactNode }) {
@@ -36,7 +37,9 @@ export default function TeacherLayout({ children }: { children: React.ReactNode 
     { label: 'Mark Attendance', href: '/dashboard/teacher/attendance', icon: CalendarCheck },
     { label: 'Schedule', href: '/dashboard/teacher/schedule', icon: CalendarDays },
     { label: 'Syllabus-Tracker', href: '/dashboard/teacher/syllabus-tracker', icon: NotebookText	 },
-    { label: 'Notification', href: '/dashboard/teacher/notification', icon: Bell	 }
+    { label: 'Notification', href: '/dashboard/teacher/notification', icon: Bell	 },
+    { label: 'Chat', href: '/dashboard/teacher/chat', icon: MessageSquareHeartIcon },
+    { label: 'Logout', href: '/logout', icon: LogOut }	 
   ];
 
   if (!user) {

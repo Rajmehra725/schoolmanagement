@@ -1,10 +1,9 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { getCurrentUser } from '@/lib/getCurrentUser';
-import { useRouter } from 'next/navigation';
 import {
   BookOpen,
   CalendarDays,
@@ -13,6 +12,7 @@ import {
   Menu,
   BellDotIcon,
   X,
+  MessageSquareHeartIcon
 } from 'lucide-react';
 
 export default function StudentLayout({ children }: { children: React.ReactNode }) {
@@ -35,7 +35,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
     { label: 'My Classes', href: '/dashboard/student/classes', icon: BookOpen },
     { label: 'My Attendance', href: '/dashboard/student/attendance', icon: CalendarDays },
     { label: 'Report Card', href: '/dashboard/student/report-card', icon: FileText },
-     { label: 'Notification', href: '/dashboard/student/notification', icon: BellDotIcon },
+    { label: 'Notification', href: '/dashboard/student/notification', icon: BellDotIcon },
+    { label: 'Chat', href: '/dashboard/student/chat', icon: MessageSquareHeartIcon },
   ];
 
   if (!user) {
@@ -52,8 +53,8 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Mobile Sidebar Toggle */}
+    <div className="flex h-screen">
+      {/* Mobile Toggle */}
       <div className="md:hidden fixed top-4 left-4 z-50">
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -77,7 +78,6 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
                   key={href}
                   href={href}
                   onClick={() => {
-                    // Close sidebar on mobile after navigation
                     if (window.innerWidth < 768) setSidebarOpen(false);
                   }}
                   className={`flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors ${
@@ -104,7 +104,7 @@ export default function StudentLayout({ children }: { children: React.ReactNode 
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 p-6 md:ml-64 overflow-y-auto">
+      <main className="flex-1 px-4 py-6 overflow-y-auto bg-gray-50">
         {children}
       </main>
     </div>
