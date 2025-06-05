@@ -1,226 +1,263 @@
+// ChatBoxWithFirebase.tsx
 'use client';
 
+import { motion, AnimatePresence } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
-import { useAuthState } from 'react-firebase-hooks/auth';
-import { auth, db } from '@/firebase/config';
 import {
   collection,
+  doc,
   onSnapshot,
+  updateDoc,
+  deleteDoc,
   addDoc,
   serverTimestamp,
   query,
-  orderBy,
-  setDoc,
-  doc,
+  orderBy
 } from 'firebase/firestore';
-import { motion, AnimatePresence } from 'framer-motion';
-import dynamic from 'next/dynamic';
-import { Smile, SendHorizonal } from 'lucide-react';
-
-const Picker = dynamic(() => import('emoji-picker-react'), { ssr: false });
-
-interface User {
-  id: string;
-  name: string;
-  photoURL?: string;
-}
+import { db } from '@/firebase/config';
 
 interface Message {
-  senderId: string;
+  id: string;
   text: string;
+  senderId: string;
+  receiverId: string;
   timestamp: any;
+  status?: 'sent' | 'delivered' | 'seen';
+  reaction?: string;
 }
 
-export default function AdminChatPage() {
-  const [user] = useAuthState(auth);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
+interface ChatBoxProps {
+  userId: string;
+  selectedUserId: string;
+  selectedUserName: string;
+  chatId: string;
+}
+
+const emojiOptions = ['👍', '❤️', '😂', '🔥', '😢'];
+
+export default function ChatBox({ userId, selectedUserId, selectedUserName, chatId }: ChatBoxProps) {
   const [messages, setMessages] = useState<Message[]>([]);
-  const [message, setMessage] = useState('');
-  const [loadingMessages, setLoadingMessages] = useState(false);
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
-  const bottomRef = useRef<HTMLDivElement>(null);
+  const [loading, setLoading] = useState(true);
+  const [typing, setTyping] = useState(false);
+  const [input, setInput] = useState('');
+  const [editMsgId, setEditMsgId] = useState<string | null>(null);
+  const [notification, setNotification] = useState('');
+  const bottomRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    if (!user) return;
-
-    const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
-      const usersList = snapshot.docs
-        .filter((doc) => doc.id !== user.uid)
-        .map((doc) => ({
-          id: doc.id,
-          name: doc.data().name,
-          photoURL: doc.data().photoURL,
-        }));
-      setUsers(usersList);
-    });
-
-    return () => unsub();
-  }, [user]);
-
-  useEffect(() => {
-    if (!user || !selectedUser) return;
-
-    setLoadingMessages(true);
-    const chatId = [user.uid, selectedUser.id].sort().join('_');
-    const chatRef = collection(db, 'chats', chatId, 'messages');
-    const q = query(chatRef, orderBy('timestamp'));
-
-    const unsub = onSnapshot(q, (snapshot) => {
-      const msgs = snapshot.docs.map((doc) => doc.data() as Message);
+    const q = query(collection(db, 'chats', chatId, 'messages'), orderBy('timestamp'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const msgs: Message[] = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Message));
       setMessages(msgs);
-      setLoadingMessages(false);
-      setTimeout(() => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-      }, 100);
+      setLoading(false);
+      markDelivered(msgs);
+      markSeen(msgs);
     });
+    return unsubscribe;
+  }, [chatId]);
 
-    return () => unsub();
-  }, [user, selectedUser]);
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, typing]);
 
-  const handleSend = async () => {
-    if (!message.trim() || !user || !selectedUser) return;
-
-    const chatId = [user.uid, selectedUser.id].sort().join('_');
-    await addDoc(collection(db, 'chats', chatId, 'messages'), {
-      senderId: user.uid,
-      text: message,
-      timestamp: serverTimestamp(),
-    });
-
-    await setDoc(doc(db, 'chatSummaries', user.uid, 'threads', selectedUser.id), {
-      userId: selectedUser.id,
-      name: selectedUser.name,
-      lastMessage: message,
-      timestamp: serverTimestamp(),
-    });
-
-    await setDoc(doc(db, 'chatSummaries', selectedUser.id, 'threads', user.uid), {
-      userId: user.uid,
-      name: user.displayName,
-      lastMessage: message,
-      timestamp: serverTimestamp(),
-    });
-
-    setMessage('');
-    inputRef.current?.focus();
-    setShowEmojiPicker(false);
-    setIsTyping(false);
+  const markDelivered = async (msgs: Message[]) => {
+    for (const msg of msgs) {
+      if (msg.receiverId === userId && msg.status === 'sent') {
+        const msgRef = doc(db, 'chats', chatId, 'messages', msg.id);
+        await updateDoc(msgRef, { status: 'delivered' });
+      }
+    }
   };
 
-  const onEmojiClick = (emojiData: any) => {
-    setMessage((prev) => prev + emojiData.emoji);
+  const markSeen = async (msgs: Message[]) => {
+    for (const msg of msgs) {
+      if (msg.receiverId === userId && msg.status !== 'seen') {
+        const msgRef = doc(db, 'chats', chatId, 'messages', msg.id);
+        await updateDoc(msgRef, { status: 'seen' });
+      }
+    }
+  };
+
+  const handleReaction = async (index: number, emoji: string) => {
+    const msg = messages[index];
+    const msgRef = doc(db, 'chats', chatId, 'messages', msg.id);
+    await updateDoc(msgRef, { reaction: emoji });
+  };
+
+  const sendMessage = async () => {
+    if (input.trim() === '') return;
+    if (editMsgId) {
+      const msgRef = doc(db, 'chats', chatId, 'messages', editMsgId);
+      await updateDoc(msgRef, { text: input });
+      setNotification('Message edited');
+      setEditMsgId(null);
+    } else {
+      await addDoc(collection(db, 'chats', chatId, 'messages'), {
+        text: input,
+        senderId: userId,
+        receiverId: selectedUserId,
+        timestamp: serverTimestamp(),
+        status: 'sent',
+      });
+      setNotification('Message sent');
+    }
+    setInput('');
+    setTimeout(() => setNotification(''), 2000);
+  };
+
+  const handleEdit = (msg: Message) => {
+    setEditMsgId(msg.id);
+    setInput(msg.text);
+  };
+
+  const handleDelete = async (msgId: string) => {
+    await deleteDoc(doc(db, 'chats', chatId, 'messages', msgId));
+    setNotification('Message deleted');
+    setTimeout(() => setNotification(''), 2000);
   };
 
   return (
-    <div className="flex flex-col md:flex-row h-screen">
-      {/* Sidebar */}
-      <div className="w-full md:w-1/3 lg:w-1/4 border-r p-4 overflow-y-auto bg-white shadow">
-        <h2 className="font-bold text-xl mb-4 text-blue-600">Users</h2>
-        {users.map((u) => (
-          <motion.div
-            layout
-            key={u.id}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            className={`flex items-center gap-3 p-2 cursor-pointer rounded mb-2 transition ${
-              selectedUser?.id === u.id ? 'bg-blue-100' : 'hover:bg-gray-100'
-            }`}
-            onClick={() => setSelectedUser(u)}
-          >
-            <img
-              src={u.photoURL || '/default-avatar.png'}
-              alt="avatar"
-              className="w-8 h-8 rounded-full object-cover"
-            />
-            <div className="font-medium truncate">{u.name}</div>
-          </motion.div>
-        ))}
+    <div className="flex flex-col h-full">
+      {/* Header */}
+      <div className="p-4 border-b bg-white font-semibold text-blue-600 shadow text-lg">
+        Chat with {selectedUserName}
       </div>
 
+      {/* Notification */}
+      {notification && (
+        <div className="text-center text-sm bg-green-100 text-green-700 py-1 animate-fade-in">
+          {notification}
+        </div>
+      )}
+
       {/* Chat Box */}
-      <div className="flex-1 flex flex-col bg-gray-50 relative">
-        {selectedUser ? (
-          <>
-            <div className="border-b p-4 font-semibold flex items-center justify-between bg-white">
-              <span>Chat with {selectedUser.name}</span>
-              <span className="text-xs text-gray-500">Last seen: Recently</span>
-            </div>
-
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
-              {loadingMessages ? (
-                <div className="text-center text-gray-500">Loading messages...</div>
-              ) : (
-                <AnimatePresence>
-                  {messages.map((msg, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: -10 }}
-                      transition={{ duration: 0.2 }}
-                      className={`text-sm p-3 rounded-lg shadow max-w-xs break-words ${
-                        msg.senderId === user?.uid
-                          ? 'ml-auto bg-blue-200 text-right'
-                          : 'bg-white text-left'
-                      }`}
-                    >
-                      <div>{msg.text}</div>
-                      <div className="text-[10px] text-gray-500 mt-1">
-                        {msg.timestamp?.toDate
-                          ? new Date(msg.timestamp.toDate()).toLocaleTimeString()
-                          : '...'}
-                      </div>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              )}
-              {isTyping && (
-                <div className="text-sm text-gray-400 italic">Typing...</div>
-              )}
-              <div ref={bottomRef} />
-            </div>
-
-            {showEmojiPicker && (
-              <div className="absolute bottom-24 left-1 z-10">
-                <Picker onEmojiClick={onEmojiClick} />
-              </div>
-            )}
-
-            <div className="border-t p-4 flex bg-white relative gap-2 items-center">
-              <button
-                onClick={() => setShowEmojiPicker((prev) => !prev)}
-                className="bg-gray-200 p-2 rounded hover:bg-gray-300"
-              >
-                <Smile size={18} />
-              </button>
-
-              <input
-                ref={inputRef}
-                value={message}
-                onChange={(e) => {
-                  setMessage(e.target.value);
-                  setIsTyping(!!e.target.value);
-                }}
-                onKeyDown={(e) => e.key === 'Enter' && handleSend()}
-                placeholder="Type a message..."
-                className="flex-1 border px-4 py-2 rounded-l focus:outline-none focus:ring-2 focus:ring-blue-400"
-              />
-              <button
-                onClick={handleSend}
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r transition flex items-center gap-1"
-              >
-                Send <SendHorizonal size={16} />
-              </button>
-            </div>
-          </>
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50 space-y-3 custom-scroll relative">
+        {loading ? (
+          <div className="text-center text-gray-500 animate-pulse">Loading messages...</div>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-400 text-xl">
-            Select a user to start chatting
-          </div>
+          <AnimatePresence initial={false}>
+            {messages.map((msg, index) => {
+              const isOwn = msg.senderId === userId;
+              const time = msg.timestamp?.toDate
+                ? new Date(msg.timestamp.toDate()).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })
+                : '...';
+
+              return (
+                <motion.div
+                  key={msg.id}
+                  onMouseEnter={() => setTyping(true)}
+                  onMouseLeave={() => setTyping(false)}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className={`group relative p-3 max-w-[75%] rounded-xl shadow-sm text-sm break-words ${
+                    isOwn
+                      ? 'ml-auto bg-blue-100 text-right text-gray-800'
+                      : 'bg-white text-left text-gray-900'
+                  }`}
+                >
+                  <div>{msg.text}</div>
+
+                  {msg.reaction && (
+                    <div className="text-xl mt-1">
+                      <span>{msg.reaction}</span>
+                    </div>
+                  )}
+
+                  {typing && (
+                    <div
+                      className={`absolute -top-8 ${
+                        isOwn ? 'right-0' : 'left-0'
+                      } bg-white p-1 rounded-lg shadow flex gap-1`}
+                    >
+                      {emojiOptions.map((emoji) => (
+                        <button
+                          key={emoji}
+                          className="hover:scale-110 transition text-lg"
+                          onClick={() => handleReaction(index, emoji)}
+                        >
+                          {emoji}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="text-[10px] text-gray-500 mt-1 flex justify-between items-center gap-2">
+                    <span>{time}</span>
+                    {isOwn && (
+                      <div className="flex gap-2 text-xs font-semibold">
+                        {msg.status && (
+                          <span
+                            className={`${
+                              msg.status === 'seen'
+                                ? 'text-green-500'
+                                : msg.status === 'delivered'
+                                ? 'text-blue-500'
+                                : 'text-gray-400'
+                            }`}
+                          >
+                            {msg.status}
+                          </span>
+                        )}
+                        <button
+                          onClick={() => handleEdit(msg)}
+                          className="text-yellow-500 hover:underline"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => handleDelete(msg.id)}
+                          className="text-red-500 hover:underline"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         )}
+
+        {typing && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex items-center text-gray-500 italic text-sm gap-1 mt-2"
+          >
+            <span>{selectedUserName} is typing</span>
+            <div className="flex gap-[2px]">
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce" />
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-100" />
+              <span className="w-1.5 h-1.5 bg-gray-400 rounded-full animate-bounce delay-200" />
+            </div>
+          </motion.div>
+        )}
+
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input Bar */}
+      <div className="p-3 bg-white border-t flex gap-2 max-sm:flex-col max-sm:items-stretch">
+        <input
+          className="flex-1 px-4 py-2 border rounded-full shadow-sm text-sm focus:outline-none"
+          type="text"
+          placeholder="Type a message..."
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
+        />
+        <button
+          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-full text-sm font-semibold"
+          onClick={sendMessage}
+        >
+          {editMsgId ? 'Update' : 'Send'}
+        </button>
       </div>
     </div>
   );

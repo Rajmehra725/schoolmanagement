@@ -47,3 +47,28 @@ body {
   overflow-x: hidden;
   touch-action: pan-y;
 }
+/* custom-scroll */
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 9999px;
+}
+.custom-scroll:hover::-webkit-scrollbar-thumb {
+  background: #999;
+}
+/* Add this in globals.css if needed */
+.custom-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.custom-scroll::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1; /* tailwind slate-300 */
+  border-radius: 9999px;
+}
+.custom-scroll:hover::-webkit-scrollbar-thumb {
+  background-color: #94a3b8; /* tailwind slate-400 */
+}

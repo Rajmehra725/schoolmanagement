@@ -1,116 +1,92 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { collection, doc, getDoc, onSnapshot } from 'firebase/firestore';
-import { db } from '@/firebase/config';
-import { AnimatePresence, motion } from 'framer-motion';
-import Image from 'next/image';
+import { motion, AnimatePresence } from 'framer-motion';
+import { useState } from 'react';
 
-interface ChatListProps {
-  onSelectUser: (user: any) => void;
-  currentUserId: string;
-}
-
-interface ChatSummary {
+interface User {
   id: string;
   name: string;
-  photoURL?: string;
-  lastMessage: string;
-  timestamp?: any;
-  unread?: boolean;
+  photoURL?: string | null;
+  status?: 'online' | 'offline';
 }
 
-export default function ChatList({ onSelectUser, currentUserId }: ChatListProps) {
-  const [chatSummaries, setChatSummaries] = useState<ChatSummary[]>([]);
-  const [loading, setLoading] = useState(true);
+interface UserListProps {
+  users: User[];
+  selectedUserId: string | null;
+  onSelectUser: (user: User) => void;
+}
 
-  useEffect(() => {
-    const summaryRef = collection(db, 'chatSummaries', currentUserId, 'threads');
+export default function UserList({ users, selectedUserId, onSelectUser }: UserListProps) {
+  const [searchTerm, setSearchTerm] = useState('');
 
-    const unsub = onSnapshot(summaryRef, async (snapshot) => {
-      const summaries: ChatSummary[] = await Promise.all(
-        snapshot.docs.map(async (docSnap) => {
-          const userId = docSnap.id;
-          const data = docSnap.data();
-          const userRef = doc(db, 'users', userId);
-          const userDoc = await getDoc(userRef);
-          return {
-            id: userId,
-            name: userDoc.exists() ? userDoc.data().name : 'Unknown User',
-            photoURL: userDoc.exists() ? userDoc.data().photoURL : '',
-            lastMessage: data.lastMessage || '',
-            timestamp: data.timestamp,
-            unread: data.unread,
-          };
-        })
-      );
-
-      setChatSummaries(
-        summaries.sort(
-          (a, b) => b.timestamp?.toMillis?.() - a.timestamp?.toMillis?.()
-        )
-      );
-      setLoading(false);
-    });
-
-    return () => unsub();
-  }, [currentUserId]);
+  const filteredUsers = users.filter((u) =>
+    u.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="p-4 space-y-2 bg-white h-screen overflow-y-auto border-r">
-      <h2 className="text-xl font-bold text-blue-600 mb-4">Chats</h2>
+    <div className="w-full md:w-1/3 lg:w-1/4 border-r p-4 overflow-y-auto bg-white shadow h-[200px] md:h-auto flex flex-col gap-4">
+      <h2 className="font-bold text-xl text-blue-600">Users</h2>
 
-      {loading ? (
-        <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-14 bg-gray-100 animate-pulse rounded" />
-          ))}
-        </div>
-      ) : (
+      {/* 🔍 Search bar */}
+      <input
+        type="text"
+        placeholder="Search users..."
+        className="p-2 border border-gray-300 rounded-md outline-blue-400"
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
+      />
+
+      <div className="flex-1 overflow-y-auto custom-scroll">
         <AnimatePresence>
-          {chatSummaries.map((chat) => (
+          {filteredUsers.map((u) => (
             <motion.div
-              key={chat.id}
-              initial={{ opacity: 0, x: -20 }}
+              key={u.id}
+              layout
+              initial={{ opacity: 0, x: -10 }}
               animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
+              exit={{ opacity: 0, x: 10 }}
+              transition={{ duration: 0.2 }}
               whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => onSelectUser({ id: chat.id, name: chat.name, photoURL: chat.photoURL })}
-              className={`flex items-center p-3 rounded-lg cursor-pointer transition border gap-3 ${
-                chat.unread ? 'bg-yellow-50 font-semibold border-yellow-300' : 'hover:bg-gray-100 border-transparent'
+              whileTap={{ scale: 0.97 }}
+              className={`p-2 cursor-pointer rounded-lg mb-2 shadow-sm transition flex items-center gap-4 ${
+                selectedUserId === u.id ? 'bg-blue-100' : 'hover:bg-gray-50'
               }`}
+              onClick={() => onSelectUser(u)}
             >
-              <Image
-                src={chat.photoURL || '/default-profile.png'}
-                alt={chat.name}
-                width={40}
-                height={40}
-                className="rounded-full object-cover"
-              />
-              <div className="flex flex-col w-full">
-                <div className="flex justify-between items-center">
-                  <span className="text-md truncate">{chat.name}</span>
-                  <span className="text-xs text-gray-400">
-                    {chat.timestamp?.toDate
-                      ? new Date(chat.timestamp.toDate()).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })
-                      : ''}
-                  </span>
-                </div>
-                <div className="text-xs text-gray-600 truncate">
-                  {chat.lastMessage}
-                </div>
+              <div className="relative">
+                <img
+                  src={u.photoURL || '/default-profile.png'}
+                  alt={u.name}
+                  className="w-12 h-12 rounded-full object-cover border border-gray-300"
+                />
+                {/* 🟢 Status badge */}
+                <span
+                  className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border border-white ${
+                    u.status === 'online' ? 'bg-green-500' : 'bg-gray-400'
+                  }`}
+                />
               </div>
-              {chat.unread && (
-                <div className="ml-2 w-2 h-2 rounded-full bg-red-500" title="Unread message" />
-              )}
+
+              <div className="flex flex-col">
+                <span className="font-medium text-gray-800">{u.name}</span>
+                {u.status && (
+                  <span className="text-xs text-gray-500 capitalize">{u.status}</span>
+                )}
+              </div>
             </motion.div>
           ))}
+
+          {filteredUsers.length === 0 && (
+            <motion.div
+              className="text-center text-gray-500 py-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+            >
+              No users found
+            </motion.div>
+          )}
         </AnimatePresence>
-      )}
+      </div>
     </div>
   );
 }

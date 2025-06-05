@@ -15,14 +15,14 @@ import {
 } from 'firebase/firestore';
 import { motion, AnimatePresence } from 'framer-motion';
 import dynamic from 'next/dynamic';
-import { Smile, SendHorizonal } from 'lucide-react';
+import { Smile, SendHorizonal, ArrowLeft } from 'lucide-react';
 
 const Picker = dynamic(() => import('emoji-picker-react'), { ssr: false });
 
 interface User {
   id: string;
   name: string;
-  photoURL?: string;
+  photoURL?: string | null;
 }
 
 interface Message {
@@ -42,28 +42,35 @@ export default function AdminChatPage() {
   const [typing, setTyping] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const typingTimeout = useRef<NodeJS.Timeout | null>(null);
 
-  // Fetch users with profile photos
+  // Fetch users except current user
   useEffect(() => {
     if (!user) return;
 
     const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
       const usersList = snapshot.docs
         .filter((doc) => doc.id !== user.uid)
-        .map((doc) => ({
-          id: doc.id,
-          name: doc.data().name,
-          photoURL: doc.data().photoURL || null,
-        }));
+        .map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: typeof data.name === 'string' && data.name.trim() !== '' ? data.name : 'Unknown User',
+            photoURL: data.photoURL || null,
+          };
+        });
       setUsers(usersList);
     });
 
     return () => unsub();
   }, [user]);
 
-  // Load messages for selected chat
+  // Fetch messages for selected user chat
   useEffect(() => {
-    if (!user || !selectedUser) return;
+    if (!user || !selectedUser) {
+      setMessages([]);
+      return;
+    }
 
     setLoadingMessages(true);
     const chatId = [user.uid, selectedUser.id].sort().join('_');
@@ -82,9 +89,12 @@ export default function AdminChatPage() {
     return () => unsub();
   }, [user, selectedUser]);
 
-  // Typing indicator - listen for other user typing
+  // Listen typing status of selected user
   useEffect(() => {
-    if (!user || !selectedUser) return;
+    if (!user || !selectedUser) {
+      setTyping(false);
+      return;
+    }
 
     const chatId = [user.uid, selectedUser.id].sort().join('_');
     const typingRef = doc(db, 'typingStatus', chatId);
@@ -101,7 +111,6 @@ export default function AdminChatPage() {
     return () => unsub();
   }, [selectedUser, user]);
 
-  // Update typing status in Firestore
   const handleTypingStatus = async (isTyping: boolean) => {
     if (!user || !selectedUser) return;
     const chatId = [user.uid, selectedUser.id].sort().join('_');
@@ -114,26 +123,22 @@ export default function AdminChatPage() {
     );
   };
 
-  // Handle message input change and typing
-  let typingTimeout: NodeJS.Timeout;
   const onInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setMessage(e.target.value);
     handleTypingStatus(true);
-
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
+    if (typingTimeout.current) clearTimeout(typingTimeout.current);
+    typingTimeout.current = setTimeout(() => {
       handleTypingStatus(false);
     }, 1500);
   };
 
-  // Send message handler
   const handleSend = async () => {
     if (!message.trim() || !user || !selectedUser) return;
 
     const chatId = [user.uid, selectedUser.id].sort().join('_');
     await addDoc(collection(db, 'chats', chatId, 'messages'), {
       senderId: user.uid,
-      text: message,
+      text: message.trim(),
       timestamp: serverTimestamp(),
     });
 
@@ -142,7 +147,7 @@ export default function AdminChatPage() {
       {
         userId: selectedUser.id,
         name: selectedUser.name,
-        lastMessage: message,
+        lastMessage: message.trim(),
         timestamp: serverTimestamp(),
       }
     );
@@ -151,8 +156,8 @@ export default function AdminChatPage() {
       doc(db, 'chatSummaries', selectedUser.id, 'threads', user.uid),
       {
         userId: user.uid,
-        name: user.displayName,
-        lastMessage: message,
+        name: user.displayName || 'Admin',
+        lastMessage: message.trim(),
         timestamp: serverTimestamp(),
       }
     );
@@ -163,16 +168,29 @@ export default function AdminChatPage() {
     await handleTypingStatus(false);
   };
 
-  // Add emoji to message
   const onEmojiClick = (emojiData: any) => {
     setMessage((prev) => prev + emojiData.emoji);
+    inputRef.current?.focus();
   };
 
   return (
-    <div className="h-screen flex flex-col md:flex-row">
-      {/* Sidebar: Users list */}
-      <div className="w-full md:w-1/3 lg:w-1/4 border-r p-4 overflow-y-auto bg-white shadow h-[200px] md:h-auto">
+    <div className="h-screen flex flex-col md:flex-row bg-gray-100">
+      {/* Sidebar */}
+      <div
+        className={`
+          fixed inset-0 bg-white z-30 p-4 overflow-y-auto border-r shadow-md
+          md:static md:w-1/3 lg:w-1/4 md:shadow-none
+          ${selectedUser ? 'translate-x-0 md:translate-x-0' : 'translate-x-0 md:translate-x-0'}
+          ${selectedUser ? 'translate-x-full md:translate-x-0' : 'translate-x-0'}
+          transition-transform duration-300 ease-in-out
+          md:block
+        `}
+        style={{ maxHeight: '100vh' }}
+      >
         <h2 className="font-bold text-xl mb-4 text-blue-600">Users</h2>
+        {users.length === 0 && (
+          <p className="text-gray-500 text-center mt-10">No users found</p>
+        )}
         {users.map((u) => (
           <motion.div
             layout
@@ -186,37 +204,52 @@ export default function AdminChatPage() {
           >
             <img
               src={u.photoURL || '/default-profile.png'}
-              alt={`${u.name} profile`}
+              alt={u.name}
               className="w-10 h-10 rounded-full object-cover border border-gray-300"
             />
-            <div className="font-medium">{u.name}</div>
+            <div className="font-medium text-sm md:text-base">{u.name}</div>
           </motion.div>
         ))}
       </div>
 
-      {/* Chat Box */}
-      <div className="w-full md:w-2/3 lg:w-3/4 flex flex-col bg-gray-50 relative">
+      {/* Chat box */}
+      <div
+        className={`flex flex-col bg-gray-50 relative md:w-2/3 lg:w-3/4
+          ${selectedUser ? 'block' : 'hidden md:flex'}
+        `}
+        style={{ maxHeight: '100vh' }}
+      >
         {selectedUser ? (
           <>
             {/* Header */}
-            <div className="border-b p-4 font-semibold flex items-center justify-between bg-white">
+            <div className="border-b p-4 font-semibold flex items-center justify-between bg-white sticky top-0 z-20 shadow-sm">
               <div className="flex items-center gap-3">
+                <button
+                  className="md:hidden p-1 rounded hover:bg-gray-100"
+                  onClick={() => setSelectedUser(null)}
+                  aria-label="Back to user list"
+                >
+                  <ArrowLeft size={20} />
+                </button>
                 <img
                   src={selectedUser.photoURL || '/default-profile.png'}
-                  alt={`${selectedUser.name} profile`}
+                  alt={selectedUser.name}
                   className="w-8 h-8 rounded-full object-cover border border-gray-300"
                 />
-                <span>Chat with {selectedUser.name}</span>
+                <span className="text-sm md:text-base font-medium">{selectedUser.name}</span>
               </div>
               <span className="text-xs text-gray-500">Last seen: Recently</span>
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-2">
+            <div
+              className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100"
+              style={{ scrollBehavior: 'smooth' }}
+            >
               {loadingMessages ? (
                 <div className="text-center text-gray-500">Loading messages...</div>
               ) : (
-                <AnimatePresence>
+                <AnimatePresence initial={false}>
                   {messages.map((msg, i) => {
                     const isOwn = msg.senderId === user?.uid;
                     return (
@@ -231,7 +264,7 @@ export default function AdminChatPage() {
                         } flex flex-col`}
                       >
                         <div>{msg.text}</div>
-                        <div className="text-[10px] text-gray-500 mt-1">
+                        <div className="text-[10px] text-gray-500 mt-1 select-none">
                           {msg.timestamp?.toDate
                             ? new Date(msg.timestamp.toDate()).toLocaleTimeString()
                             : '...'}
@@ -251,17 +284,18 @@ export default function AdminChatPage() {
 
             {/* Emoji picker */}
             {showEmojiPicker && (
-              <div className="absolute bottom-24 left-1 z-10">
+              <div className="absolute bottom-20 left-2 z-20 max-w-xs md:max-w-md shadow-lg rounded overflow-hidden">
                 <Picker onEmojiClick={onEmojiClick} />
               </div>
             )}
 
             {/* Input area */}
-            <div className="border-t p-4 flex bg-white relative gap-2 items-center flex-wrap">
+            <div className="border-t p-4 flex bg-white relative gap-2 items-center flex-wrap md:flex-nowrap">
               <button
                 onClick={() => setShowEmojiPicker((prev) => !prev)}
                 className="bg-gray-200 p-2 rounded hover:bg-gray-300"
                 aria-label="Toggle emoji picker"
+                type="button"
               >
                 <Smile size={18} />
               </button>
@@ -274,18 +308,21 @@ export default function AdminChatPage() {
                 placeholder="Type a message..."
                 className="flex-1 border px-4 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-400 min-w-[150px]"
                 autoComplete="off"
+                type="text"
               />
+
               <button
                 onClick={handleSend}
                 className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded transition flex items-center gap-1"
                 aria-label="Send message"
+                type="button"
               >
                 Send <SendHorizonal size={16} />
               </button>
             </div>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-400 text-xl">
+          <div className="flex-1 flex items-center justify-center text-gray-400 text-xl p-4">
             Select a user to start chatting
           </div>
         )}
