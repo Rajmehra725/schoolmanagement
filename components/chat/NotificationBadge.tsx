@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 
 interface Props {
   count: number;
-  lastMessage?: string; // Optional prop add kiya
+  lastMessage?: string;
 }
 
 export default function NotificationBadge({ count, lastMessage }: Props) {
@@ -14,11 +14,12 @@ export default function NotificationBadge({ count, lastMessage }: Props) {
       initial={{ scale: 0.9 }}
       animate={{ scale: [1, 1.3, 1] }}
       transition={{ duration: 1, repeat: Infinity }}
-      title={lastMessage} // hover par last message dikhana
+      title={lastMessage}
+      style={{ whiteSpace: 'nowrap' }} // Prevent lastMessage wrapping in tooltip
     >
       {count > 99 ? '99+' : count}
       {lastMessage && (
-        <div className="text-[10px] truncate mt-1">{lastMessage}</div>
+        <div className="text-[10px] truncate mt-1 max-w-[150px]">{lastMessage}</div>
       )}
     </motion.div>
   );

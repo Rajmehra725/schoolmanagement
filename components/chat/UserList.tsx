@@ -10,22 +10,25 @@ import {
   updateDoc,
   getDocs,
   writeBatch,
+  serverTimestamp,
+  Timestamp,
 } from 'firebase/firestore';
 import { db, auth } from '@/firebase/config';
 import { motion } from 'framer-motion';
 import NotificationBadge from './NotificationBadge';
 import Image from 'next/image';
 import { User } from '@/app/types';
-import Avtar from "./default-avatar.png"
+import Avtar from './default-avatar.png';
+
 interface UserListProps {
   activeUserId: string | null;
   onUserSelect: (user: User) => void;
 }
+
 interface UnreadInfo {
   count: number;
   lastMessage: string;
 }
-
 
 export default function UserList({ activeUserId, onUserSelect }: UserListProps) {
   const [users, setUsers] = useState<User[]>([]);
@@ -42,15 +45,25 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
     }
   }, []);
 
-  // Handle online/offline status
+  // Online heartbeat
   useEffect(() => {
     if (!currentUserId) return;
     const userRef = doc(db, 'users', currentUserId);
-    updateDoc(userRef, { online: true });
-    const handleBeforeUnload = () => updateDoc(userRef, { online: false });
+    updateDoc(userRef, { online: true, lastSeen: serverTimestamp() });
+
+    const interval = setInterval(() => {
+      updateDoc(userRef, { lastSeen: serverTimestamp(), online: true });
+    }, 30000);
+
+    const handleBeforeUnload = () => {
+      updateDoc(userRef, { online: false, lastSeen: serverTimestamp() });
+    };
+
     window.addEventListener('beforeunload', handleBeforeUnload);
+
     return () => {
-      updateDoc(userRef, { online: false });
+      clearInterval(interval);
+      updateDoc(userRef, { online: false, lastSeen: serverTimestamp() });
       window.removeEventListener('beforeunload', handleBeforeUnload);
     };
   }, [currentUserId]);
@@ -70,8 +83,7 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
     return () => unsubscribe();
   }, []);
 
-  // Track unread messages from each user (real-time)
-
+  // Real-time unread message tracking
   useEffect(() => {
     if (!currentUserId) return;
 
@@ -84,13 +96,13 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
 
     const unsubscribe = onSnapshot(unreadQuery, (snapshot) => {
       const unreadData: Record<string, UnreadInfo> = {};
-      const latestTimestamp: Record<string, any> = {};
+      const latestTimestamp: Record<string, Timestamp | null | undefined> = {};
 
       snapshot.docs.forEach((doc) => {
         const data = doc.data();
         const fromId = data.from;
         const text = data.text || '';
-        const timestamp = data.timestamp;
+        const timestamp: Timestamp | undefined = data.timestamp;
 
         if (fromId) {
           if (!unreadData[fromId]) {
@@ -101,7 +113,7 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
 
           if (
             !latestTimestamp[fromId] ||
-            (timestamp && timestamp.toMillis() > latestTimestamp[fromId].toMillis())
+            (timestamp && timestamp.toMillis() > latestTimestamp[fromId]?.toMillis())
           ) {
             latestTimestamp[fromId] = timestamp;
             unreadData[fromId].lastMessage = text;
@@ -115,29 +127,53 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
     return () => unsubscribe();
   }, [currentUserId]);
 
-  // Mark messages as read from a specific user
+  // Mark messages as read
   const markMessagesAsRead = async (fromUserId: string) => {
     if (!currentUserId) return;
 
     const messagesRef = collection(db, 'messages');
     const q = query(
       messagesRef,
-      where('chatParticipants', 'array-contains', currentUserId),
-      where('uid', '==', fromUserId),
-      where('seen', '==', false)
+      where('from', '==', fromUserId),
+      where('to', '==', currentUserId),
+      where('read', '==', false)
     );
 
     const snapshot = await getDocs(q);
     const batch = writeBatch(db);
     snapshot.docs.forEach((docSnap) => {
-      batch.update(docSnap.ref, { seen: true });
+      batch.update(docSnap.ref, { read: true });
     });
     await batch.commit();
   };
 
   const handleUserSelect = async (user: User) => {
+    // Optimistic update
+    setUnreadMap((prev) => {
+      const updated = { ...prev };
+      delete updated[user.id];
+      return updated;
+    });
+
     await markMessagesAsRead(user.id);
     onUserSelect(user);
+  };
+
+  const isRecent = (timestamp: Timestamp | null | undefined): boolean => {
+    if (!timestamp) return false;
+    try {
+      const now = Date.now();
+      const tsDate = timestamp.toDate();
+      return now - tsDate.getTime() < 2 * 60 * 1000;
+    } catch {
+      return false;
+    }
+  };
+
+  const userIsOnline = (user: User): boolean => {
+    if (user.online) return true;
+    if ('lastSeen' in user && isRecent((user as any).lastSeen)) return true;
+    return false;
   };
 
   if (loadingUsers) {
@@ -151,15 +187,19 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
   return (
     <div
       className="space-y-3 overflow-y-auto"
-      style={{
-        maxHeight: 'calc(100vh - 100px)',
-      }}
+      style={{ maxHeight: 'calc(100vh - 100px)' }}
     >
       {users
         .filter((user) => user.id !== currentUserId)
-        .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0))
+        .sort((a, b) => {
+          const aOnline = userIsOnline(a);
+          const bOnline = userIsOnline(b);
+          return bOnline === aOnline ? 0 : bOnline ? 1 : -1;
+        })
         .map((user) => {
           const nameToShow = user.name?.trim() || 'Student';
+          const isOnline = userIsOnline(user);
+
           return (
             <motion.button
               key={user.id}
@@ -171,7 +211,7 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.97 }}
               aria-pressed={user.id === activeUserId}
-              aria-label={`Chat with ${nameToShow}. ${unreadMap[user.id] || 0} unread messages.`}
+              aria-label={`Chat with ${nameToShow}. ${unreadMap[user.id]?.count || 0} unread messages.`}
             >
               <div className="relative flex-shrink-0 h-12 w-12 rounded-full overflow-hidden border-2 border-indigo-300">
                 <Image
@@ -182,15 +222,16 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
                   className="object-cover"
                 />
                 <span
-                  className={`absolute bottom-1 right-1 block h-3 w-3 rounded-full border-2 border-white ${user.online ? 'bg-green-500' : 'bg-gray-400'
-                    }`}
-                  title={user.online ? 'Online' : 'Offline'}
+                  className={`absolute bottom-1 right-1 block h-3 w-3 rounded-full border-2 border-white ${
+                    isOnline ? 'bg-green-500' : 'bg-gray-400'
+                  }`}
+                  title={isOnline ? 'Online' : 'Offline'}
                 />
               </div>
               <div className="flex flex-col flex-grow min-w-0">
                 <p className="font-semibold text-gray-900 truncate">{nameToShow}</p>
-                <p className={`text-xs ${user.online ? 'text-green-600' : 'text-gray-400'}`}>
-                  {user.online ? 'Online' : 'Offline'}
+                <p className={`text-xs ${isOnline ? 'text-green-600' : 'text-gray-400'}`}>
+                  {isOnline ? 'Online' : 'Offline'}
                 </p>
               </div>
               {unreadMap[user.id]?.count > 0 && (
@@ -199,7 +240,6 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
                   lastMessage={unreadMap[user.id].lastMessage}
                 />
               )}
-
             </motion.button>
           );
         })}

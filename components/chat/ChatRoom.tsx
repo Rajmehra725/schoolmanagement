@@ -36,10 +36,6 @@ interface UserInfo {
   online: boolean;
 }
 
-interface ChatHeaderProps {
-  user: UserInfo;
-  onBack?: () => void; // ✅ mark as optional
-}
 interface ChatRoomProps {
   user: UserInfo;
   onBack: () => void;
@@ -48,11 +44,15 @@ interface ChatRoomProps {
 export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
   const [messages, setMessages] = useState<Message[]>([]);
   const [authUser] = useAuthState(auth);
-  const chatRef = useRef<HTMLDivElement>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    chatRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
 
   const markMessagesAsSeen = async (msgs: Message[]) => {
     if (!authUser) return;
@@ -89,7 +89,6 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
 
       setMessages(msgs);
       markMessagesAsSeen(msgs);
-      scrollToBottom();
     });
 
     return () => unsubscribe();
@@ -98,21 +97,34 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
   const lastMessage = messages[messages.length - 1];
 
   return (
-    <main className="flex flex-col w-full h-screen md:h-full md:max-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-lg">
-      {/* Header with back button */}
-    <ChatHeader user={user} onBack={onBack || (() => {})} />
+    <motion.main
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+      transition={{ type: 'spring', stiffness: 90, damping: 18 }}
+      className="flex flex-col w-full h-screen md:h-[calc(100vh-80px)] bg-gradient-to-br from-gray-100 to-white dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 rounded-lg overflow-hidden"
+    >
+      {/* Chat Header */}
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.1 }}
+        className="sticky top-0 z-20 bg-white/70 dark:bg-gray-900/80 backdrop-blur-md shadow-md"
+      >
+        <ChatHeader user={user} onBack={onBack || (() => {})} />
+      </motion.div>
 
-
-      {/* Message list */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-700">
         <AnimatePresence initial={false}>
-          {messages.map((msg) => (
+          {messages.map((msg, i) => (
             <motion.div
               key={msg.id}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
+              className="hover:scale-[1.01] transform transition-all"
             >
               <MessageBubble
                 message={msg}
@@ -122,17 +134,33 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
           ))}
         </AnimatePresence>
 
-        <TypingIndicator />
+        {/* Typing Indicator */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.3 }}
+          className="flex items-center space-x-1 ml-3"
+        >
+          <TypingIndicator />
+        </motion.div>
 
-        <div className="flex justify-end pr-2 text-sm text-green-500">
+        {/* Seen Indicator */}
+        <div className="flex justify-end pr-2 text-xs text-green-500 mt-1">
           {lastMessage && <SeenIndicator messageId={lastMessage.id} />}
         </div>
 
-        <div ref={chatRef} />
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Message input */}
-      <ChatInput chatUserId={user.id} currentUser={authUser} />
-    </main>
+      {/* Chat Input */}
+      <motion.div
+        initial={{ y: 50, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 200, damping: 18 }}
+        className="sticky bottom-0 bg-white dark:bg-gray-900 shadow-inner px-4 py-2 border-t border-gray-300 dark:border-gray-700"
+      >
+        <ChatInput chatUserId={user.id} currentUser={authUser} />
+      </motion.div>
+    </motion.main>
   );
 }
