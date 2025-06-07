@@ -4,9 +4,9 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Navbar from "@/components/Navbar/page";
 import Footer from "@/components/Footer/page";
-import { Toaster } from 'react-hot-toast';
+
 import { Analytics } from "@vercel/analytics/next"
-import NotificationsWrapper from '@/components/chat/NotificationsWrapper';
+
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -59,8 +59,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-white text-gray-900`}
       >
         <Analytics />
-        <NotificationsWrapper />
-        <Toaster position="top-right" reverseOrder={false} />
+
         <Navbar/>
         {children}
         <Footer/>

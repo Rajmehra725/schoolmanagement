@@ -3,4 +3,7 @@ export interface User {
   name: string;
   photoURL: string; // make it required
   online: boolean;
+   email: string;
+  avatar: string;
+  displayName: string;
 }

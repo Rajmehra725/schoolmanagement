@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import { addDoc, collection, serverTimestamp, doc, setDoc } from "firebase/firestore";
 import { db } from "@/firebase/config";
 import { FaSmile, FaPaperclip, FaMicrophone } from "react-icons/fa";
-import EmojiPicker, { Theme } from 'emoji-picker-react';
+import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
 
 interface User {
   uid: string;
@@ -61,19 +61,27 @@ export default function ChatInput({
 
   const sendMessage = async () => {
     if (!input.trim() || !currentUser) return;
-    await addDoc(collection(db, "messages"), {
-      text: input,
-      uid: currentUser.uid,
-      name: currentUser.displayName,
-      timestamp: serverTimestamp(),
-      chatParticipants: [currentUser.uid, chatUserId],
-    });
-    setInput("");
-    setTypingUser?.("");
-    updateTypingStatus(false);
+
+    try {
+      await addDoc(collection(db, "messages"), {
+        text: input.trim(),
+        from: currentUser.uid,
+        to: chatUserId,
+        read: false,
+        uid: currentUser.uid,
+        name: currentUser.displayName,
+        timestamp: serverTimestamp(),
+        chatParticipants: [currentUser.uid, chatUserId],
+      });
+      setInput("");
+      setTypingUser?.("");
+      updateTypingStatus(false);
+    } catch (error) {
+      console.error("Failed to send message:", error);
+    }
   };
 
-  const handleEmojiClick = (emojiData: any) => {
+  const handleEmojiClick = (emojiData: EmojiClickData, event: MouseEvent) => {
     setInput((prev) => prev + emojiData.emoji);
   };
 
@@ -100,11 +108,21 @@ export default function ChatInput({
       }}
       className="relative flex items-center gap-3 p-4 border-t bg-white dark:bg-gray-800"
     >
-      <button type="button" onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="text-gray-600 dark:text-gray-300">
+      <button
+        type="button"
+        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+        className="text-gray-600 dark:text-gray-300"
+        aria-label="Toggle emoji picker"
+      >
         <FaSmile className="text-xl" />
       </button>
-      <button type="button" onClick={() => alert("📎 File upload not implemented yet")}>
-        <FaPaperclip className="text-xl text-gray-600 dark:text-gray-300" />
+      <button
+        type="button"
+        onClick={() => alert("📎 File upload not implemented yet")}
+        className="text-gray-600 dark:text-gray-300"
+        aria-label="Attach file"
+      >
+        <FaPaperclip className="text-xl" />
       </button>
       <input
         type="text"
@@ -120,16 +138,20 @@ export default function ChatInput({
       >
         Send
       </button>
-      <button type="button" onClick={handleVoiceClick} title="Record Voice">
-        <FaMicrophone className={`text-xl ${recording ? 'text-red-500' : 'text-gray-600 dark:text-gray-300'}`} />
+      <button
+        type="button"
+        onClick={handleVoiceClick}
+        title="Record Voice"
+        aria-label="Record voice message"
+      >
+        <FaMicrophone
+          className={`text-xl ${recording ? "text-red-500" : "text-gray-600 dark:text-gray-300"}`}
+        />
       </button>
 
       {showEmojiPicker && (
         <div className="absolute bottom-full left-0 mb-2 z-50">
-          <EmojiPicker
-            onEmojiClick={handleEmojiClick}
-            theme={'dark' as Theme} // ✅ explicitly typed
-          />
+          <EmojiPicker onEmojiClick={handleEmojiClick} theme={'dark' as Theme} />
         </div>
       )}
     </form>

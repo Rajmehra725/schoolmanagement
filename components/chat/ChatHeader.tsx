@@ -2,6 +2,10 @@
 
 import { ArrowLeft } from 'lucide-react';
 import Image from 'next/image';
+import { useEffect, useState } from 'react';
+import { db } from '@/firebase/config';
+import { doc, onSnapshot } from 'firebase/firestore';
+import moment from 'moment'; // npm install moment
 
 interface ChatHeaderProps {
   user: {
@@ -10,16 +14,34 @@ interface ChatHeaderProps {
     photoURL: string;
     online: boolean;
   };
-  onBack: () => void;
+  onBack?: () => void;
 }
 
 export default function ChatHeader({ user, onBack }: ChatHeaderProps) {
+  const [lastSeen, setLastSeen] = useState<string | null>(null);
+
+  useEffect(() => {
+    const userRef = doc(db, 'users', user.id);
+
+    const unsubscribe = onSnapshot(userRef, (snapshot) => {
+      const data = snapshot.data();
+      if (data?.lastSeen) {
+        const time = moment(data.lastSeen.toDate()).fromNow(); // e.g. "2 minutes ago"
+        setLastSeen(time);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user.id]);
+
   return (
     <div className="flex items-center gap-3 px-4 py-2 bg-white/10 backdrop-blur-md border-b border-white/10">
       {/* Back Button - visible only on mobile */}
-      <button onClick={onBack} className="md:hidden text-white mr-2">
-        <ArrowLeft size={24} />
-      </button>
+      {onBack && (
+        <button onClick={onBack} className="md:hidden text-white mr-2">
+          <ArrowLeft size={24} />
+        </button>
+      )}
 
       {/* Profile Picture */}
       {user.photoURL?.trim() ? (
@@ -40,7 +62,7 @@ export default function ChatHeader({ user, onBack }: ChatHeaderProps) {
       <div className="flex flex-col">
         <span className="text-white font-semibold text-base">{user.name}</span>
         <span className={`text-sm ${user.online ? 'text-green-400' : 'text-gray-400'}`}>
-          {user.online ? 'Online' : 'Offline'}
+          {user.online ? 'Online' : lastSeen ? `last seen ${lastSeen}` : 'Offline'}
         </span>
       </div>
     </div>

@@ -1,5 +1,3 @@
-'use client';
-
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '@/firebase/config';
@@ -9,22 +7,41 @@ interface SeenIndicatorProps {
 }
 
 export default function SeenIndicator({ messageId }: SeenIndicatorProps): JSX.Element {
-  const [seen, setSeen] = useState(false);
+  const [status, setStatus] = useState<'sent' | 'delivered' | 'seen'>('sent');
 
   useEffect(() => {
     const unsubscribe = onSnapshot(doc(db, 'messages', messageId), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
-        setSeen(Boolean(data.seen));
+        if (data.seen) {
+          setStatus('seen');
+        } else if (data.delivered) {
+          setStatus('delivered');
+        } else {
+          setStatus('sent');
+        }
       }
     });
 
     return () => unsubscribe();
   }, [messageId]);
 
+  let icon = '✓';
+  let color = 'text-gray-400';
+
+  if (status === 'delivered') {
+    icon = '✓✓';
+  }
+
+  if (status === 'seen') {
+    icon = '✓✓';
+    color = 'text-blue-500';
+  }
+
   return (
-    <span className={`ml-2 text-xs ${seen ? 'text-blue-400' : 'text-gray-400'}`} title={seen ? 'Seen' : 'Sent'}>
-      {seen ? '✓✓' : '✓'}
+    <span className={`ml-2 text-xs ${color}`} title={status}>
+      {icon}
     </span>
   );
 }
+  

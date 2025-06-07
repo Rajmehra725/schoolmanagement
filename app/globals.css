@@ -80,3 +80,14 @@ body {
   background-color: rgba(100, 100, 100, 0.3);
   border-radius: 3px;
 }
+/* Example: thin scrollbar for better UI */
+div::-webkit-scrollbar {
+  width: 6px;
+}
+div::-webkit-scrollbar-track {
+  background: transparent;
+}
+div::-webkit-scrollbar-thumb {
+  background-color: rgba(100, 100, 100, 0.3);
+  border-radius: 3px;
+}

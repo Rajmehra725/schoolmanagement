@@ -1,26 +1,38 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import { collection, onSnapshot, query, where } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import {
+  collection,
+  onSnapshot,
+  query,
+  where,
+  doc,
+  updateDoc,
+  getDocs,
+  writeBatch,
+} from 'firebase/firestore';
 import { db, auth } from '@/firebase/config';
 import { motion } from 'framer-motion';
 import NotificationBadge from './NotificationBadge';
 import Image from 'next/image';
-import { User } from '@/app/types'; // adjust path as needed
-
+import { User } from '@/app/types';
+import Avtar from "./default-avatar.png"
 interface UserListProps {
   activeUserId: string | null;
   onUserSelect: (user: User) => void;
 }
+interface UnreadInfo {
+  count: number;
+  lastMessage: string;
+}
+
 
 export default function UserList({ activeUserId, onUserSelect }: UserListProps) {
   const [users, setUsers] = useState<User[]>([]);
-  const [unreadMap, setUnreadMap] = useState<Record<string, number>>({});
+  const [unreadMap, setUnreadMap] = useState<Record<string, UnreadInfo>>({});
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [loadingUnread, setLoadingUnread] = useState(true);
 
-  // Get currentUserId from auth or localStorage fallback
   useEffect(() => {
     if (auth.currentUser?.uid) {
       setCurrentUserId(auth.currentUser.uid);
@@ -30,7 +42,20 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
     }
   }, []);
 
-  // Subscribe to realtime users list
+  // Handle online/offline status
+  useEffect(() => {
+    if (!currentUserId) return;
+    const userRef = doc(db, 'users', currentUserId);
+    updateDoc(userRef, { online: true });
+    const handleBeforeUnload = () => updateDoc(userRef, { online: false });
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => {
+      updateDoc(userRef, { online: false });
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
+  }, [currentUserId]);
+
+  // Fetch all users
   useEffect(() => {
     const usersCollection = collection(db, 'users');
     setLoadingUsers(true);
@@ -42,20 +67,15 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
       setUsers(loadedUsers);
       setLoadingUsers(false);
     });
-
     return () => unsubscribe();
   }, []);
 
-  // Subscribe to unread messages count for current user grouped by sender
+  // Track unread messages from each user (real-time)
+
   useEffect(() => {
     if (!currentUserId) return;
 
-    setLoadingUnread(true);
-
     const messagesCollection = collection(db, 'messages');
-
-    // Query unread messages where currentUser is participant and not sender, and read==false
-    // Adjust according to your DB schema; here assuming 'to' is recipient id
     const unreadQuery = query(
       messagesCollection,
       where('to', '==', currentUserId),
@@ -63,120 +83,126 @@ export default function UserList({ activeUserId, onUserSelect }: UserListProps) 
     );
 
     const unsubscribe = onSnapshot(unreadQuery, (snapshot) => {
-      const counts: Record<string, number> = {};
+      const unreadData: Record<string, UnreadInfo> = {};
+      const latestTimestamp: Record<string, any> = {};
+
       snapshot.docs.forEach((doc) => {
-        const data = doc.data() as { from?: string };
-        if (data.from) {
-          counts[data.from] = (counts[data.from] || 0) + 1;
+        const data = doc.data();
+        const fromId = data.from;
+        const text = data.text || '';
+        const timestamp = data.timestamp;
+
+        if (fromId) {
+          if (!unreadData[fromId]) {
+            unreadData[fromId] = { count: 0, lastMessage: '' };
+            latestTimestamp[fromId] = null;
+          }
+          unreadData[fromId].count += 1;
+
+          if (
+            !latestTimestamp[fromId] ||
+            (timestamp && timestamp.toMillis() > latestTimestamp[fromId].toMillis())
+          ) {
+            latestTimestamp[fromId] = timestamp;
+            unreadData[fromId].lastMessage = text;
+          }
         }
       });
-      setUnreadMap(counts);
-      setLoadingUnread(false);
+
+      setUnreadMap(unreadData);
     });
 
     return () => unsubscribe();
   }, [currentUserId]);
 
-  // Utility to validate photoURL
-  const getValidSrc = useCallback((url?: string | null) => {
-    return url && url.trim() !== '' ? url : null;
-  }, []);
+  // Mark messages as read from a specific user
+  const markMessagesAsRead = async (fromUserId: string) => {
+    if (!currentUserId) return;
 
-  // Debounce user click to prevent multiple quick triggers
-  const [clickDisabled, setClickDisabled] = useState(false);
-  const handleUserSelect = useCallback(
-    (user: User) => {
-      if (clickDisabled) return;
-      setClickDisabled(true);
-      onUserSelect(user);
-      setTimeout(() => setClickDisabled(false), 300);
-    },
-    [clickDisabled, onUserSelect]
-  );
+    const messagesRef = collection(db, 'messages');
+    const q = query(
+      messagesRef,
+      where('chatParticipants', 'array-contains', currentUserId),
+      where('uid', '==', fromUserId),
+      where('seen', '==', false)
+    );
 
-  // Memoize users list render for perf
-  const renderedUsers = useMemo(() => {
-    if (loadingUsers) return <p>Loading users...</p>;
-    if (users.length === 0) return <p>No users found.</p>;
+    const snapshot = await getDocs(q);
+    const batch = writeBatch(db);
+    snapshot.docs.forEach((docSnap) => {
+      batch.update(docSnap.ref, { seen: true });
+    });
+    await batch.commit();
+  };
 
-    return users
-      .filter((user) => user.id !== currentUserId)
-      .map((user) => {
-        const isActive = activeUserId === user.id;
-        const unreadCount = unreadMap[user.id] || 0;
-        const photoURL = getValidSrc(user.photoURL);
+  const handleUserSelect = async (user: User) => {
+    await markMessagesAsRead(user.id);
+    onUserSelect(user);
+  };
 
-        return (
-          <motion.li
-            key={user.id}
-            onClick={() => handleUserSelect(user)}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            whileHover={{ scale: 1.02 }}
-            whileTap={{ scale: 0.98 }}
-            transition={{ type: 'spring', stiffness: 200 }}
-            className={`cursor-pointer rounded-lg p-2 mb-2 flex items-center gap-3 
-              ${isActive ? 'bg-indigo-800 shadow-md' : 'hover:bg-indigo-900'}`}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                handleUserSelect(user);
-              }
-            }}
-            aria-pressed={isActive}
-            aria-label={`Chat with ${user.name}, ${unreadCount} unread messages`}
-          >
-            {photoURL ? (
-              <Image
-                src={photoURL}
-                alt={user.name}
-                width={32}
-                height={32}
-                className="rounded-full object-cover"
-                loading="lazy"
-              />
-            ) : (
-              <div className="h-8 w-8 bg-indigo-600 rounded-full flex items-center justify-center text-white text-sm">
-                {(user.name?.[0] ?? '?').toUpperCase()}
-              </div>
-            )}
-
-            <div className="flex-1 truncate">
-              <span className="font-medium">{user.name}</span>
-              <div className="text-xs text-gray-300 select-none">
-                {user.online ? '🟢 Online' : '⚫ Offline'}
-              </div>
-            </div>
-
-            {/* Unread messages badge */}
-            {loadingUnread ? (
-              <div className="text-xs text-gray-400">...</div>
-            ) : (
-              unreadCount > 0 && <NotificationBadge count={unreadCount} />
-            )}
-          </motion.li>
-        );
-      });
-  }, [
-    users,
-    currentUserId,
-    activeUserId,
-    unreadMap,
-    loadingUsers,
-    loadingUnread,
-    getValidSrc,
-    handleUserSelect,
-  ]);
+  if (loadingUsers) {
+    return (
+      <div className="flex justify-center items-center h-32 text-gray-500">
+        Loading users...
+      </div>
+    );
+  }
 
   return (
-    <aside
-      className="flex flex-col h-full w-full bg-indigo-950 text-white p-4 overflow-y-auto border-r border-indigo-700"
-      aria-label="User List"
+    <div
+      className="space-y-3 overflow-y-auto"
+      style={{
+        maxHeight: 'calc(100vh - 100px)',
+      }}
     >
-      <h2 className="text-xl font-bold mb-4 select-none">📇 Chats</h2>
-      <ul>{renderedUsers}</ul>
-    </aside>
+      {users
+        .filter((user) => user.id !== currentUserId)
+        .sort((a, b) => (b.online ? 1 : 0) - (a.online ? 1 : 0))
+        .map((user) => {
+          const nameToShow = user.name?.trim() || 'Student';
+          return (
+            <motion.button
+              key={user.id}
+              onClick={() => handleUserSelect(user)}
+              className={`w-full flex items-center gap-4 p-3 rounded-lg transition-colors 
+                focus:outline-none focus:ring-2 focus:ring-indigo-500
+                ${user.id === activeUserId ? 'bg-indigo-100 shadow-md' : 'hover:bg-indigo-50'}
+              `}
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              aria-pressed={user.id === activeUserId}
+              aria-label={`Chat with ${nameToShow}. ${unreadMap[user.id] || 0} unread messages.`}
+            >
+              <div className="relative flex-shrink-0 h-12 w-12 rounded-full overflow-hidden border-2 border-indigo-300">
+                <Image
+                  src={user.photoURL || Avtar}
+                  alt={`Profile picture of ${nameToShow}`}
+                  fill
+                  sizes="48px"
+                  className="object-cover"
+                />
+                <span
+                  className={`absolute bottom-1 right-1 block h-3 w-3 rounded-full border-2 border-white ${user.online ? 'bg-green-500' : 'bg-gray-400'
+                    }`}
+                  title={user.online ? 'Online' : 'Offline'}
+                />
+              </div>
+              <div className="flex flex-col flex-grow min-w-0">
+                <p className="font-semibold text-gray-900 truncate">{nameToShow}</p>
+                <p className={`text-xs ${user.online ? 'text-green-600' : 'text-gray-400'}`}>
+                  {user.online ? 'Online' : 'Offline'}
+                </p>
+              </div>
+              {unreadMap[user.id]?.count > 0 && (
+                <NotificationBadge
+                  count={unreadMap[user.id].count}
+                  lastMessage={unreadMap[user.id].lastMessage}
+                />
+              )}
+
+            </motion.button>
+          );
+        })}
+    </div>
   );
 }

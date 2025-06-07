@@ -10,9 +10,6 @@ import {
   where,
   updateDoc,
   doc,
-  getDocs,
-  QuerySnapshot,
-  DocumentData,
 } from 'firebase/firestore';
 import { useAuthState } from 'react-firebase-hooks/auth';
 import MessageBubble from './MessageBubble';
@@ -39,9 +36,13 @@ interface UserInfo {
   online: boolean;
 }
 
+interface ChatHeaderProps {
+  user: UserInfo;
+  onBack?: () => void; // ✅ mark as optional
+}
 interface ChatRoomProps {
   user: UserInfo;
-  onBack?: () => void; // for mobile back button
+  onBack: () => void;
 }
 
 export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
@@ -49,23 +50,16 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
   const [authUser] = useAuthState(auth);
   const chatRef = useRef<HTMLDivElement>(null);
 
-  // Scroll to bottom helper
   const scrollToBottom = () => {
     chatRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  // Mark all unseen messages from this user as seen
   const markMessagesAsSeen = async (msgs: Message[]) => {
     if (!authUser) return;
-
-    // Filter unseen messages sent by the other user
     const unseenMessages = msgs.filter(
-      (msg) =>
-        msg.uid === user.id && // from other user
-        !msg.seen // not yet seen
+      (msg) => msg.uid === user.id && !msg.seen
     );
 
-    // Batch update all unseen messages as seen
     const updates = unseenMessages.map(async (msg) => {
       const msgRef = doc(db, 'messages', msg.id);
       await updateDoc(msgRef, { seen: true });
@@ -94,10 +88,7 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
         );
 
       setMessages(msgs);
-
-      // Mark unseen messages as seen
       markMessagesAsSeen(msgs);
-
       scrollToBottom();
     });
 
@@ -107,9 +98,12 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
   const lastMessage = messages[messages.length - 1];
 
   return (
-    <main className="flex flex-col flex-1 bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 rounded-lg max-w-md mx-auto h-screen shadow-lg">
-      <ChatHeader user={user} onBack={onBack || (() => {})} />
+    <main className="flex flex-col w-full h-screen md:h-full md:max-h-screen bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100 shadow-lg">
+      {/* Header with back button */}
+    <ChatHeader user={user} onBack={onBack || (() => {})} />
 
+
+      {/* Message list */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin">
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
@@ -120,7 +114,10 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.2 }}
             >
-              <MessageBubble message={msg} currentUserId={authUser?.uid || ''} />
+              <MessageBubble
+                message={msg}
+                currentUserId={authUser?.uid || ''}
+              />
             </motion.div>
           ))}
         </AnimatePresence>
@@ -134,6 +131,7 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
         <div ref={chatRef} />
       </div>
 
+      {/* Message input */}
       <ChatInput chatUserId={user.id} currentUser={authUser} />
     </main>
   );

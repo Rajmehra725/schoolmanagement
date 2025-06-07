@@ -23,6 +23,16 @@ interface MessageProps {
   onReply?: (message: Message) => void;
 }
 
+function formatTime(timestamp: any) {
+  if (!timestamp?.toDate) return '';
+  const date = timestamp.toDate();
+  return date.toLocaleTimeString([], {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
 export default function MessageBubble({ message, currentUserId, onReply }: MessageProps): JSX.Element {
   const [user] = useAuthState(auth);
   const isOwnMessage = message.uid === user?.uid;
@@ -90,6 +100,7 @@ export default function MessageBubble({ message, currentUserId, onReply }: Messa
         ) : (
           <>
             <p className="whitespace-pre-wrap">{message.text}</p>
+
             {reactions.length > 0 && (
               <div className="mt-1 flex gap-1 flex-wrap">
                 {reactions.map((emoji, idx) => (
@@ -97,7 +108,12 @@ export default function MessageBubble({ message, currentUserId, onReply }: Messa
                 ))}
               </div>
             )}
-            <div className="flex justify-between items-center mt-1 text-xs text-gray-300">
+
+            {/* Message Time & Seen Tick */}
+            <div className="flex justify-between items-center mt-1 text-xs text-white/60 dark:text-gray-300">
+              <span className="text-xs">
+                {message.timestamp ? formatTime(message.timestamp) : '...'}
+              </span>
               {isOwnMessage && (
                 <span>
                   {message.seen ? (
