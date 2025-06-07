@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef } from "react";
 import { addDoc, collection, serverTimestamp, doc, setDoc } from "firebase/firestore";
 import { db } from "@/firebase/config";
-import { FaSmile, FaPaperclip, FaMicrophone } from "react-icons/fa";
-import EmojiPicker, { Theme, EmojiClickData } from "emoji-picker-react";
+import { FaSmile, FaPaperclip, FaMicrophone, FaPaperPlane } from "react-icons/fa";
+import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 
 interface User {
   uid: string;
@@ -25,9 +25,7 @@ export default function ChatInput({
   const [input, setInput] = useState<string>("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [recording, setRecording] = useState(false);
 
-  // Typing status update
   const updateTypingStatus = async (typing: boolean) => {
     if (!currentUser) return;
     const typingDocRef = doc(db, "typingStatus", currentUser.uid);
@@ -81,79 +79,56 @@ export default function ChatInput({
     }
   };
 
-  const handleEmojiClick = (emojiData: EmojiClickData, event: MouseEvent) => {
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
     setInput((prev) => prev + emojiData.emoji);
   };
 
-  useEffect(() => {
-    return () => {
-      updateTypingStatus(false);
-    };
-  }, []);
-
-  const handleVoiceClick = () => {
-    if (recording) return; // simulate simple voice message
-    setRecording(true);
-    setTimeout(() => {
-      setRecording(false);
-      alert("🎙️ Voice message recorded (simulated)");
-    }, 3000);
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") sendMessage();
   };
 
   return (
-    <form
-      onSubmit={(e) => {
-        e.preventDefault();
-        sendMessage();
-      }}
-      className="relative flex items-center gap-3 p-4 border-t bg-white dark:bg-gray-800"
-    >
-      <button
-        type="button"
-        onClick={() => setShowEmojiPicker(!showEmojiPicker)}
-        className="text-gray-600 dark:text-gray-300"
-        aria-label="Toggle emoji picker"
-      >
-        <FaSmile className="text-xl" />
-      </button>
-      <button
-        type="button"
-        onClick={() => alert("📎 File upload not implemented yet")}
-        className="text-gray-600 dark:text-gray-300"
-        aria-label="Attach file"
-      >
-        <FaPaperclip className="text-xl" />
-      </button>
-      <input
-        type="text"
-        className="flex-1 rounded-md border border-gray-300 dark:border-gray-600 px-4 py-2 text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-        placeholder="Type a message..."
-        value={input}
-        onChange={handleInputChange}
-        autoComplete="off"
-      />
-      <button
-        type="submit"
-        className="bg-blue-600 hover:bg-blue-700 text-white px-5 py-2 rounded-md font-semibold transition"
-      >
-        Send
-      </button>
-      <button
-        type="button"
-        onClick={handleVoiceClick}
-        title="Record Voice"
-        aria-label="Record voice message"
-      >
-        <FaMicrophone
-          className={`text-xl ${recording ? "text-red-500" : "text-gray-600 dark:text-gray-300"}`}
-        />
-      </button>
-
+    <div className="relative bg-indigo-800 border-t border-indigo-700 p-2 sm:p-3">
+      {/* Emoji Picker */}
       {showEmojiPicker && (
-        <div className="absolute bottom-full left-0 mb-2 z-50">
-          <EmojiPicker onEmojiClick={handleEmojiClick} theme={'dark' as Theme} />
+        <div className="absolute bottom-16 left-2 sm:left-4 z-50 bg-indigo-800 rounded-lg shadow-lg max-h-80 overflow-y-auto">
+          <EmojiPicker theme={Theme.DARK} onEmojiClick={handleEmojiClick} />
         </div>
       )}
-    </form>
+
+      <div className="flex flex-wrap items-center gap-2">
+        <button
+          onClick={() => setShowEmojiPicker((prev) => !prev)}
+          className="text-white text-lg sm:text-xl"
+        >
+          <FaSmile />
+        </button>
+
+        <input
+          type="text"
+          value={input}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyPress}
+          placeholder="Type a message..."
+          className="flex-1 min-w-[100px] px-3 py-2 rounded-full bg-indigo-700 text-white placeholder-gray-300 focus:outline-none text-sm sm:text-base"
+        />
+
+        <button className="text-white text-lg sm:text-xl">
+          <FaPaperclip />
+        </button>
+
+        <button className="text-white text-lg sm:text-xl">
+          <FaMicrophone />
+        </button>
+
+        <button
+          onClick={sendMessage}
+          className="text-white text-lg sm:text-xl"
+          aria-label="Send"
+        >
+          <FaPaperPlane />
+        </button>
+      </div>
+    </div>
   );
 }
