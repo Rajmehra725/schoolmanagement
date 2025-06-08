@@ -16,7 +16,6 @@ import {
   LogOut,
   Newspaper,
   MessageCircleHeartIcon,
-  GalleryHorizontal,
   HomeIcon
 } from 'lucide-react';
 
@@ -46,7 +45,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   { label: 'Notification', href: '/dashboard/admin/notification', icon: Bell },
   { label: 'Blog', href: '/dashboard/admin/blog', icon: Newspaper },
   { label: 'Chat', href: '/dashboard/admin/chat', icon: MessageCircleHeartIcon },
-  { label: 'Instagram Gallery', href: '/dashboard/admin/instagram-gallery', icon:GalleryHorizontal  }
+  
 ];
 
   const handleLinkClick = () => {
