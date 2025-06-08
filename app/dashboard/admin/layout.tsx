@@ -15,7 +15,9 @@ import {
   Menu,
   LogOut,
   Newspaper,
-  MessageCircleHeartIcon
+  MessageCircleHeartIcon,
+  GalleryHorizontal,
+  HomeIcon
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -36,13 +38,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const navItems = [
   { label: 'Dashboard', href: '/dashboard/admin', icon: LayoutDashboard },
+  { label: 'Home', href: '/dashboard/admin/Home', icon: HomeIcon },
   { label: 'Students', href: '/dashboard/admin/students', icon: Users },
   { label: 'Teachers', href: '/dashboard/admin/teachers', icon: User },
   { label: 'Classes', href: '/dashboard/admin/classes', icon: BookOpen },
   { label: 'Attendance', href: '/dashboard/admin/attendance', icon: CalendarCheck },
   { label: 'Notification', href: '/dashboard/admin/notification', icon: Bell },
   { label: 'Blog', href: '/dashboard/admin/blog', icon: Newspaper },
-  { label: 'Chat', href: '/dashboard/admin/chat', icon: MessageCircleHeartIcon }
+  { label: 'Chat', href: '/dashboard/admin/chat', icon: MessageCircleHeartIcon },
+  { label: 'Instagram Gallery', href: '/dashboard/admin/instagram-gallery', icon:GalleryHorizontal  }
 ];
 
   const handleLinkClick = () => {

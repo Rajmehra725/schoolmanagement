@@ -1,117 +1,110 @@
 'use client';
 
-const homeSections = [
-  {
-    id: 'hero',
-    title: 'Welcome to Smart School',
-    description: 'Empowering education through innovation and technology. A digital-first platform for future-ready learning.',
-    imageUrl: 'https://www.joonsquare.com/usermanage/image/business/divine-blessing-school-saharanpur-2257/divine-blessing-school-saharanpur-a1.jpg',
-    buttonText: 'Apply Now',
-    link: '/admissions',
-  },
-  {
-    id: 'about',
-    title: 'About Us',
-    description:
-      'Smart School is dedicated to nurturing future leaders through excellence in education, discipline, and values. Our school fosters creativity, innovation, and digital literacy for a better tomorrow.',
-    imageUrl: 'https://www.joonsquare.com/usermanage/image/business/divine-blessing-school-saharanpur-2257/about.jpg',
-    buttonText: 'Learn More',
-    link: '/about',
-  },
-  {
-    id: 'features',
-    title: 'Why Choose Us?',
-    description:
-      '✅ Smart Digital Classrooms\n✅ Experienced & Certified Faculty\n✅ Co-curricular and Sports Activities\n✅ Real-time Attendance Tracking\n✅ Online Exam & Digital Report Cards\n✅ Secure Campus Surveillance\n✅ Parent-Teacher Communication Portal\n✅ Online Fee Payment System',
-  },
-  {
-    id: 'stats',
-    title: 'Our Achievements',
-    description:
-      '🎓 1200+ Students\n👨‍🏫 60+ Teachers\n🏫 15 Years of Excellence\n📚 40+ Subjects\n🏆 25+ Awards Won\n🌐 100% Digital Transformation',
-  },
-  {
-    id: 'admissions',
-    title: 'Admissions Open 2025-26',
-    description:
-      'Smart School is now accepting applications for Nursery to Grade 12. Book a school tour or apply online now.',
-    buttonText: 'Start Application',
-    link: '/admissions',
-  },
-  {
-    id: 'announcements',
-    title: 'Latest Announcements',
-    description: 'Stay updated with our upcoming events, holidays, and parent meetings. Check this space regularly.',
-    buttonText: 'View All Announcements',
-    link: '/announcements',
-  },
-  {
-    id: 'academics',
-    title: 'Academic Excellence',
-    description: 'Our curriculum is designed to blend CBSE guidelines with innovation and personalized learning paths. We focus on both theoretical and practical knowledge.',
-  },
-  {
-    id: 'testimonials',
-    title: 'What People Say',
-    description:
-      '"The best school for my child!" – Parent\n"Teachers are very supportive and modern classrooms help a lot." – Student\n"Excellent academic and moral education." – Parent',
-  },
-  {
-    id: 'gallery',
-    title: 'Photo Gallery',
-    description: 'A glimpse of our vibrant school life – from classrooms to cultural events and science fairs.',
-    buttonText: 'View Full Gallery',
-    link: '/gallery',
-  },
-  {
-    id: 'faculty',
-    title: 'Meet Our Faculty',
-    description: 'Our teachers are certified professionals with vast experience and a passion for education. Continuous training and development ensure quality teaching.',
-  },
-  {
-    id: 'contact',
-    title: 'Contact Us',
-    description:
-      '📍 Smart School, City Center, Mumbai\n📞 +91-9876543210\n✉️ contact@smartschool.edu.in\n📅 Office Hours: Mon–Fri, 9:00 AM – 5:00 PM',
-  },
-];
+import React, { useEffect, useState } from 'react';
+import { db } from '@/firebase/config';
+import { collection, getDocs } from 'firebase/firestore';
 
 export default function HomePage() {
+  const [principalMessage, setPrincipalMessage] = useState<{ message: string; name?: string; photo?: string } | null>(null);
+  const [announcements, setAnnouncements] = useState<any[]>([]);
+  const [events, setEvents] = useState<any[]>([]);
+  const [topStudents, setTopStudents] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      // Principal message - assuming only one document or take first document
+      const pmSnap = await getDocs(collection(db, 'principalMessage'));
+      console.log("PM Snap docs:", pmSnap.docs);
+
+      if (!pmSnap.empty) {
+        const pmData = pmSnap.docs[0].data();
+        console.log("PM Data:", pmData);
+        setPrincipalMessage(pmData as { message: string });
+      }
+
+
+      // Announcements
+      const annSnap = await getDocs(collection(db, 'announcements'));
+      setAnnouncements(annSnap.docs.map(doc => doc.data()));
+
+      // Events
+      const evtSnap = await getDocs(collection(db, 'events'));
+      setEvents(evtSnap.docs.map(doc => doc.data()));
+
+      // Top Students
+      const studSnap = await getDocs(collection(db, 'topStudents'));
+      setTopStudents(studSnap.docs.map(doc => doc.data()));
+    };
+
+    fetchData();
+  }, []);
+
   return (
-    <div className="space-y-16 p-6 md:p-10 bg-gray-50 dark:bg-gray-900 min-h-screen">
-      {homeSections.map((section) => (
-        <section
-          key={section.id}
-          id={section.id}
-          className="rounded-2xl shadow-md bg-white dark:bg-gray-800 p-6"
-        >
-          <h2 className="text-2xl font-bold text-orange-600 mb-2">{section.title}</h2>
-          <p className="text-gray-700 dark:text-gray-300 whitespace-pre-line">
-            {section.description}
-          </p>
+    <main className="min-h-screen bg-gray-50 text-gray-800">
 
-          {section.imageUrl && (
-            <div className="mt-4">
-              <img
-                src={section.imageUrl}
-                alt={section.title}
-                className="rounded-xl shadow w-full h-auto"
-              />
-            </div>
-          )}
-
-          {section.buttonText && section.link && (
-            <a
-              href={section.link}
-              className="inline-block mt-4 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700 transition"
-            >
-              {section.buttonText}
-            </a>
-          )}
+      {/* Hero */}
+      <section className="bg-orange-600 text-white text-center py-10">
+        <h1 className="text-4xl font-bold">🏫 Welcome to RaazEdutech</h1>
+        <p className="mt-2 text-lg">Empowering Future Through Education</p>
+      </section>
+      {principalMessage && (
+        <section className="bg-white py-10 px-4 shadow-md mb-8 max-w-4xl mx-auto rounded">
+          <h2 className="text-3xl font-bold text-orange-600 mb-4 text-center">📣 Message from the Principal</h2>
+          <div className="text-center">
+            <p className="italic text-lg max-w-3xl mx-auto">{principalMessage.message}</p>
+          </div>
         </section>
-      ))}
+      )}
 
-     
-    </div>
+      {/* Principal Message */}
+      {/* Announcements */}
+      <section className="max-w-6xl mx-auto py-10 px-4">
+        <h2 className="text-2xl font-bold mb-4 text-orange-600">📢 Latest Announcements</h2>
+        <ul className="space-y-4">
+          {announcements.map((a, i) => (
+            <li key={i} className="bg-white p-4 shadow rounded">
+              <h3 className="font-semibold">{a.title}</h3>
+              <p className="text-sm">{a.description}</p>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      {/* Events */}
+      <section className="bg-white py-10 px-4">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-orange-600">📅 Upcoming Events</h2>
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            {events.map((e, i) => (
+              <li key={i} className="p-4 border border-gray-200 rounded shadow">
+                <h3 className="font-bold">{e.name}</h3>
+                <p className="text-sm">{e.date}</p>
+                <p className="text-sm">{e.description}</p>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </section>
+
+      {/* Top Students */}
+      <section className="bg-gray-100 py-10 px-4">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-orange-600">🏆 Top Performing Students</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            {topStudents.map((s, i) => (
+              <div key={i} className="text-center bg-white p-4 rounded shadow">
+                <img
+                  src={s.photo}
+                  alt={s.name}
+                  className="w-24 h-24 object-cover mx-auto rounded-full mb-2"
+                />
+                <p className="font-semibold">{s.name}</p>
+                <p className="text-sm text-gray-600">{s.grade}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
