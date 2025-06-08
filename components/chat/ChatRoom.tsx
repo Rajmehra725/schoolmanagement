@@ -102,7 +102,7 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
       animate={{ x: 0 }}
       exit={{ x: '100%' }}
       transition={{ type: 'spring', stiffness: 90, damping: 18 }}
-      className="flex flex-col w-full h-screen md:h-[calc(100vh-80px)] bg-gradient-to-br from-gray-100 to-white dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 rounded-lg overflow-hidden"
+      className="flex flex-col w-full h-[100dvh] md:h-[calc(100vh-80px)] bg-gradient-to-br from-gray-100 to-white dark:from-gray-900 dark:to-gray-800 text-gray-900 dark:text-gray-100 rounded-lg overflow-hidden"
     >
       {/* Chat Header */}
       <motion.div
@@ -115,9 +115,9 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
       </motion.div>
 
       {/* Chat Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-700">
+      <div className="flex-1 min-h-0 overflow-y-auto px-4 py-6 space-y-4 scrollbar-thin scrollbar-thumb-gray-400 dark:scrollbar-thumb-gray-700">
         <AnimatePresence initial={false}>
-          {messages.map((msg, i) => (
+          {messages.map((msg) => (
             <motion.div
               key={msg.id}
               initial={{ opacity: 0, y: 10 }}
@@ -157,7 +157,7 @@ export default function ChatRoom({ user, onBack }: ChatRoomProps): JSX.Element {
         initial={{ y: 50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 200, damping: 18 }}
-        className="sticky bottom-0 bg-white dark:bg-gray-900 shadow-inner px-4 py-2 border-t border-gray-300 dark:border-gray-700"
+        className="sticky bottom-0 bg-white dark:bg-gray-900 shadow-inner px-4 py-2 border-t border-gray-300 dark:border-gray-700 pb-[env(safe-area-inset-bottom)]"
       >
         <ChatInput chatUserId={user.id} currentUser={authUser} />
       </motion.div>
