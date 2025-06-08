@@ -89,7 +89,7 @@ export default function HomePage() {
       {/* Top Students */}
       <section className="bg-gray-100 py-10 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4 text-orange-600">🏆 Top Performing Students</h2>
+          <h2 className="text-2xl font-bold mb-4 text-orange-600">🏆 Top Performing Studentsss</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
             {topStudents.map((s, i) => (
               <div key={i} className="text-center bg-white p-4 rounded shadow">
