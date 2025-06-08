@@ -1,9 +1,20 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { addDoc, collection, serverTimestamp, doc, setDoc } from "firebase/firestore";
+import {
+  addDoc,
+  collection,
+  serverTimestamp,
+  doc,
+  setDoc,
+} from "firebase/firestore";
 import { db } from "@/firebase/config";
-import { FaSmile, FaPaperclip, FaMicrophone, FaPaperPlane } from "react-icons/fa";
+import {
+  FaSmile,
+  FaPaperclip,
+  FaMicrophone,
+  FaPaperPlane,
+} from "react-icons/fa";
 import EmojiPicker, { EmojiClickData, Theme } from "emoji-picker-react";
 
 interface User {
@@ -11,16 +22,26 @@ interface User {
   displayName: string | null;
 }
 
+interface ReplyTo {
+  id: string;
+  text: string;
+  name: string;
+}
+
 interface ChatInputProps {
   setTypingUser?: (name: string) => void;
   chatUserId: string;
   currentUser: User | null | undefined;
+  replyTo?: ReplyTo | null;
+  clearReply?: () => void;
 }
 
 export default function ChatInput({
   setTypingUser,
   chatUserId,
   currentUser,
+  replyTo,
+  clearReply,
 }: ChatInputProps): JSX.Element {
   const [input, setInput] = useState<string>("");
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
@@ -60,20 +81,31 @@ export default function ChatInput({
   const sendMessage = async () => {
     if (!input.trim() || !currentUser) return;
 
+    const newMessage: any = {
+      text: input.trim(),
+      from: currentUser.uid,
+      to: chatUserId,
+      read: false,
+      uid: currentUser.uid,
+      name: currentUser.displayName,
+      timestamp: serverTimestamp(),
+      chatParticipants: [currentUser.uid, chatUserId],
+    };
+
+    if (replyTo) {
+      newMessage.replyTo = {
+        id: replyTo.id,
+        text: replyTo.text,
+        name: replyTo.name,
+      };
+    }
+
     try {
-      await addDoc(collection(db, "messages"), {
-        text: input.trim(),
-        from: currentUser.uid,
-        to: chatUserId,
-        read: false,
-        uid: currentUser.uid,
-        name: currentUser.displayName,
-        timestamp: serverTimestamp(),
-        chatParticipants: [currentUser.uid, chatUserId],
-      });
+      await addDoc(collection(db, "messages"), newMessage);
       setInput("");
       setTypingUser?.("");
       updateTypingStatus(false);
+      clearReply?.();
     } catch (error) {
       console.error("Failed to send message:", error);
     }
@@ -93,6 +125,22 @@ export default function ChatInput({
       {showEmojiPicker && (
         <div className="absolute bottom-16 left-2 sm:left-4 z-50 bg-indigo-800 rounded-lg shadow-lg max-h-80 overflow-y-auto">
           <EmojiPicker theme={Theme.DARK} onEmojiClick={handleEmojiClick} />
+        </div>
+      )}
+
+      {/* Reply Preview */}
+      {replyTo && (
+        <div className="bg-indigo-700 text-white px-3 py-2 mb-1 rounded-md border-l-4 border-yellow-400 relative">
+          <div className="flex justify-between items-center text-sm">
+            <span className="font-medium text-yellow-300">{replyTo.name}</span>
+            <button
+              onClick={clearReply}
+              className="text-white text-xs hover:text-red-400"
+            >
+              ✕
+            </button>
+          </div>
+          <p className="truncate text-sm italic">{replyTo.text}</p>
         </div>
       )}
 

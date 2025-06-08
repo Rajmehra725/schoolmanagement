@@ -17,7 +17,7 @@ interface ChatHeaderProps {
 }
 
 export default function ChatHeader({ user, onBack }: ChatHeaderProps) {
-  const [lastSeen, setLastSeen] = useState<string | null>(null);
+  const [lastSeenTime, setLastSeenTime] = useState<Date | null>(null);
   const [exactLastSeen, setExactLastSeen] = useState<string>('');
 
   useEffect(() => {
@@ -26,14 +26,30 @@ export default function ChatHeader({ user, onBack }: ChatHeaderProps) {
     const unsubscribe = onSnapshot(userRef, (snapshot) => {
       const data = snapshot.data();
       if (data?.lastSeen) {
-        const time = moment(data.lastSeen.toDate());
-        setLastSeen(time.fromNow());
-        setExactLastSeen(time.format('MMMM Do YYYY, h:mm:ss a'));
+        const time = data.lastSeen.toDate();
+        setLastSeenTime(time);
+        setExactLastSeen(moment(time).format('MMMM Do YYYY, h:mm:ss a'));
       }
     });
 
     return () => unsubscribe();
   }, [user.id]);
+
+  // Auto-update display every 5 seconds
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (lastSeenTime) {
+        setExactLastSeen(moment(lastSeenTime).format('MMMM Do YYYY, h:mm:ss a'));
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [lastSeenTime]);
+
+  const getRelativeLastSeen = () => {
+    if (!lastSeenTime) return '';
+    return moment(lastSeenTime).toNow(true) + ' ago';
+  };
 
   return (
     <motion.div
@@ -80,7 +96,7 @@ export default function ChatHeader({ user, onBack }: ChatHeaderProps) {
                 Online
               </span>
             ) : (
-              `Last seen ${lastSeen}`
+              `Last seen ${getRelativeLastSeen()}`
             )}
           </span>
         </div>
