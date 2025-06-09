@@ -2,27 +2,46 @@
 
 import React, { useEffect, useState } from 'react';
 import { db } from '@/firebase/config';
-import { collection, getDocs } from 'firebase/firestore';
+import { getDocs ,addDoc, collection, serverTimestamp } from 'firebase/firestore';
 
 export default function HomePage() {
   const [principalMessage, setPrincipalMessage] = useState<{ message: string; name?: string; photo?: string } | null>(null);
   const [announcements, setAnnouncements] = useState<any[]>([]);
   const [events, setEvents] = useState<any[]>([]);
   const [topStudents, setTopStudents] = useState<any[]>([]);
+  const [academics, setAcademics] = useState<any[]>([]);
+  const [faculty, setFaculty] = useState<any[]>([]);
+  const [subscribers, setSubscribers] = useState<any[]>([]);
+ const [email, setEmail] = useState('');
+  const [status, setStatus] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!email) return setStatus('Please enter a valid email.');
+
+    try {
+      await addDoc(collection(db, 'newsletterEmails'), {
+        email,
+        createdAt: serverTimestamp(),
+      });
+      setEmail('');
+      setStatus('✅ Thank you for subscribing!');
+    } catch (err) {
+      console.error(err);
+      setStatus('❌ Failed to subscribe. Please try again.');
+    }
+  };
 
   useEffect(() => {
     const fetchData = async () => {
-      // Principal message - assuming only one document or take first document
+      // Principal Message
+     
       const pmSnap = await getDocs(collection(db, 'principalMessage'));
-      console.log("PM Snap docs:", pmSnap.docs);
-
       if (!pmSnap.empty) {
         const pmData = pmSnap.docs[0].data();
-        console.log("PM Data:", pmData);
         setPrincipalMessage(pmData as { message: string });
       }
-
-
       // Announcements
       const annSnap = await getDocs(collection(db, 'announcements'));
       setAnnouncements(annSnap.docs.map(doc => doc.data()));
@@ -34,6 +53,22 @@ export default function HomePage() {
       // Top Students
       const studSnap = await getDocs(collection(db, 'topStudents'));
       setTopStudents(studSnap.docs.map(doc => doc.data()));
+
+      // Academics Overview
+      const acadSnap = await getDocs(collection(db, 'academics'));
+      setAcademics(acadSnap.docs.map(doc => doc.data()));
+
+      // Faculty
+      const facSnap = await getDocs(collection(db, 'faculties')); // ✅ Matches Firestore
+      if (facSnap.empty) {
+        console.warn('No faculty data found in Firestore.');
+        return;
+      }
+      setFaculty(facSnap.docs.map(doc => doc.data()));
+
+      // Newsletter Subscribers
+      const subSnap = await getDocs(collection(db, 'newsletterEmails'));
+      setSubscribers(subSnap.docs.map(doc => doc.data()));
     };
 
     fetchData();
@@ -42,11 +77,13 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-gray-50 text-gray-800">
 
-      {/* Hero */}
+      {/* Hero Section */}
       <section className="bg-orange-600 text-white text-center py-10">
         <h1 className="text-4xl font-bold">🏫 Welcome to RaazEdutech</h1>
         <p className="mt-2 text-lg">Empowering Future Through Education</p>
       </section>
+
+      {/* Principal Message */}
       {principalMessage && (
         <section className="bg-white py-10 px-4 shadow-md mb-8 max-w-4xl mx-auto rounded">
           <h2 className="text-3xl font-bold text-orange-600 mb-4 text-center">📣 Message from the Principal</h2>
@@ -56,7 +93,6 @@ export default function HomePage() {
         </section>
       )}
 
-      {/* Principal Message */}
       {/* Announcements */}
       <section className="max-w-6xl mx-auto py-10 px-4">
         <h2 className="text-2xl font-bold mb-4 text-orange-600">📢 Latest Announcements</h2>
@@ -89,7 +125,7 @@ export default function HomePage() {
       {/* Top Students */}
       <section className="bg-gray-100 py-10 px-4">
         <div className="max-w-6xl mx-auto">
-          <h2 className="text-2xl font-bold mb-4 text-orange-600">🏆 Top Performing Studentsss</h2>
+          <h2 className="text-2xl font-bold mb-4 text-orange-600">🏆 Top Performing Students</h2>
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
             {topStudents.map((s, i) => (
               <div key={i} className="text-center bg-white p-4 rounded shadow">
@@ -105,6 +141,60 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Academics Overview */}
+      <section className="py-10 px-4 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-orange-600">📚 Academics Overview</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {academics.map((a, i) => (
+              <div key={i} className="p-4 border rounded shadow">
+                <h3 className="text-lg font-semibold">{a.title}</h3>
+                <p className="text-sm text-gray-700">{a.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Faculty Profiles */}
+      <section className="py-10 px-4 bg-gray-50">
+        <div className="max-w-6xl mx-auto">
+          <h2 className="text-2xl font-bold mb-4 text-orange-600">👨‍🏫 Meet Our Faculty</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-6">
+            {faculty.map((f, i) => (
+              <div key={i} className="text-center bg-white p-4 rounded shadow">
+                <img
+                  src={f.photoURL}
+                  alt={f.name}
+                  className="w-24 h-24 object-cover mx-auto rounded-full mb-2"
+                />
+                <p className="font-semibold">{f.name}</p>
+                <p className="text-sm text-gray-600">{f.designation}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <div className="bg-orange-100 py-10 px-4 text-center">
+      <h2 className="text-2xl font-bold mb-4 text-orange-700">✉️ Subscribe to Our Newsletter</h2>
+      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-xl mx-auto">
+        <input
+          type="email"
+          value={email}
+          onChange={e => setEmail(e.target.value)}
+          className="p-2 rounded border border-orange-300 w-full sm:w-2/3"
+          placeholder="Enter your email"
+          required
+        />
+        <button type="submit" className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition">
+          Subscribe
+        </button>
+      </form>
+      {status && <p className="mt-3 text-sm text-gray-700">{status}</p>}
+    </div>
+
     </main>
   );
 }
