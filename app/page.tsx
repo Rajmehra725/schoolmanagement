@@ -32,6 +32,21 @@ export default function HomePage() {
       setStatus('❌ Failed to subscribe. Please try again.');
     }
   };
+async function handleSubscribe(email: string) {
+  if (!email) return;
+
+  try {
+    await addDoc(collection(db, 'newsletterEmails'), {
+      email,
+      subscribedAt: serverTimestamp(), // optional: timestamp
+    });
+
+    alert('Subscribed successfully!');
+  } catch (error) {
+    console.error('Subscription failed:', error);
+    alert('Failed to subscribe. Please try again.');
+  }
+}
 
   useEffect(() => {
     const fetchData = async () => {
@@ -179,19 +194,19 @@ export default function HomePage() {
 
       <div className="bg-orange-100 py-10 px-4 text-center">
       <h2 className="text-2xl font-bold mb-4 text-orange-700">✉️ Subscribe to Our Newsletter</h2>
-      <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row justify-center items-center gap-4 max-w-xl mx-auto">
-        <input
-          type="email"
-          value={email}
-          onChange={e => setEmail(e.target.value)}
-          className="p-2 rounded border border-orange-300 w-full sm:w-2/3"
-          placeholder="Enter your email"
-          required
-        />
-        <button type="submit" className="bg-orange-600 text-white px-4 py-2 rounded hover:bg-orange-700 transition">
-          Subscribe
-        </button>
-      </form>
+     <form onSubmit={handleSubmit} className="space-y-2">
+      <input
+        type="email"
+        placeholder="Enter your email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        className="border px-4 py-2 rounded w-full"
+        required
+      />
+      <button type="submit" className="bg-orange-600 text-white px-6 py-2 rounded">
+        Subscribe
+      </button>
+    </form>
       {status && <p className="mt-3 text-sm text-gray-700">{status}</p>}
     </div>
 

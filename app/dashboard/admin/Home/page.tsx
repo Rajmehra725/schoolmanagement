@@ -84,6 +84,23 @@ export default function AdminDashboard() {
   });
 
   const [editingId, setEditingId] = useState<string | null>(null);
+
+
+  const [subscribers, setSubscribers] = useState<{ email: string }[]>([]);
+
+  useEffect(() => {
+    const fetchSubscribers = async () => {
+      try {
+        const subSnap = await getDocs(collection(db, 'newsletterEmails'));
+        const data = subSnap.docs.map(doc => doc.data() as { email: string });
+        setSubscribers(data);
+      } catch (error) {
+        console.error('Error fetching subscribers:', error);
+      }
+    };
+
+    fetchSubscribers();
+  }, []);
   // --- Fetch announcements ---
   useEffect(() => {
     const q = query(collection(db, 'announcements'), orderBy('createdAt', 'desc'));
@@ -584,14 +601,17 @@ export default function AdminDashboard() {
       </ul>
     </section>
       {/* Newsletter Emails Section */}
-      <section>
-        <h2 className="text-3xl font-semibold text-orange-600 mb-4">Newsletter Subscribers</h2>
-        <ul className="space-y-2 list-disc pl-5">
-          {emails.map((email, idx) => (
-            <li key={idx}>{email}</li>
-          ))}
-        </ul>
-      </section>
+      
+    <section className="bg-white p-6 shadow max-w-xl mx-auto mt-8 rounded">
+      <h2 className="text-xl font-bold mb-4 text-orange-600">📧 Newsletter Subscribers</h2>
+      <ul className="space-y-2">
+        {subscribers.map((subscriber, index) => (
+          <li key={index} className="border p-2 rounded text-sm text-gray-800">
+            {subscriber.email}
+          </li>
+        ))}
+      </ul>
+    </section>
 
     </div>
 
