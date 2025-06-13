@@ -1,372 +1,268 @@
 'use client';
 
-import { useEffect, useState } from "react";
-import { getCurrentUser } from "@/lib/getCurrentUser";
-import { db, auth } from "@/firebase/config";
+import Link from 'next/link';
+import { useEffect, useState } from 'react';
+import { db } from '@/firebase/config';
 import {
   collection,
-  query,
-  where,
-  updateDoc,
-  doc,
-  deleteDoc,
-  onSnapshot,
+  getCountFromServer,
   getDocs,
-} from "firebase/firestore";
+  query,
+  orderBy,
+  limit,
+  onSnapshot,
+} from 'firebase/firestore';
 import {
-  signOut,
-  updatePassword,
-  reauthenticateWithCredential,
-  EmailAuthProvider,
-  User as FirebaseUser,
-} from "firebase/auth";
+  FaUserGraduate,
+  FaChalkboardTeacher,
+  FaTrophy,
+  FaSchool,
+  FaRegCalendarAlt,
+  FaBell,
+  FaClipboardList,
+} from 'react-icons/fa';
+import { HiOutlineUserAdd } from 'react-icons/hi';
 
-type AppUser = {
+interface Student {
   id: string;
+  name: string;
+  class: string;
   email: string;
-  role: string;
-  photoURL?: string;
-};
+  dob: string;
+  fatherName: string;
+  address: string;
+  aadhar: string;
+}
 
-export default function AdminDashboard() {
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
-  const [appUser, setAppUser] = useState<AppUser | null>(null);
+export default function PrincipalDashboard() {
+  const [stats, setStats] = useState({
+    students: 0,
+    teachers: 0,
+    classes: 0,
+    achievements: 0,
+    events: 0,
+  });
+  const [notices, setNotices] = useState<string[]>([]);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [students, setStudents] = useState<Student[]>([]);
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [attendanceToday, setAttendanceToday] = useState({ present: 0, absent: 0 });
+  const [birthdaysToday, setBirthdaysToday] = useState<Student[]>([]);
 
-  const [users, setUsers] = useState<AppUser[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(false);
-  const [showUsers, setShowUsers] = useState(false);
-
-  const [editUserId, setEditUserId] = useState<string | null>(null);
-  const [editUserData, setEditUserData] = useState<Partial<AppUser>>({});
-
-  const [oldPassword, setOldPassword] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [passwordChangeStatus, setPasswordChangeStatus] = useState<string | null>(null);
-
-  // Fetch current Firebase user and their app data
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(async (user) => {
-      if (user) {
-        setFirebaseUser(user);
-        const usersSnap = await getDocs(
-          query(collection(db, "users"), where("email", "==", user.email))
-        );
-        if (!usersSnap.empty) {
-          const docSnap = usersSnap.docs[0];
-          setAppUser({ id: docSnap.id, ...(docSnap.data() as Omit<AppUser, "id">) });
-        }
-      } else {
-        setFirebaseUser(null);
-        setAppUser(null);
-      }
+    const fetchCounts = async () => {
+      const [studentsSnap, teachersSnap, classesSnap, achievementsSnap, eventsSnap] = await Promise.all([
+        getCountFromServer(collection(db, 'students')),
+        getCountFromServer(collection(db, 'teachers')),
+        getCountFromServer(collection(db, 'classes')),
+        getCountFromServer(collection(db, 'achievements')),
+        getCountFromServer(collection(db, 'events')),
+      ]);
+
+      setStats({
+        students: studentsSnap.data().count,
+        teachers: teachersSnap.data().count,
+        classes: classesSnap.data().count,
+        achievements: achievementsSnap.data().count,
+        events: eventsSnap.data().count,
+      });
+
+      const noticeQuery = query(collection(db, 'notices'), orderBy('timestamp', 'desc'), limit(5));
+      const noticeSnap = await getDocs(noticeQuery);
+      setNotices(noticeSnap.docs.map((doc) => doc.data().title));
+    };
+
+    const unsub = onSnapshot(collection(db, 'students'), (snap) => {
+      const list = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as Student));
+      setStudents(list);
     });
-    return () => unsubscribeAuth();
+
+    fetchCounts();
+    return () => unsub();
   }, []);
 
-  // Real-time listener for all users when showUsers is true
   useEffect(() => {
-    if (!showUsers) return;
-
-    setLoadingUsers(true);
-    const usersQuery = collection(db, "users");
-    const unsubscribe = onSnapshot(
-      usersQuery,
-      (snapshot) => {
-        const updatedUsers: AppUser[] = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...(doc.data() as Omit<AppUser, "id">),
-        }));
-        setUsers(updatedUsers);
-        setLoadingUsers(false);
-      },
-      (error) => {
-        console.error("Real-time user fetch error:", error);
-        setLoadingUsers(false);
-      }
-    );
-
-    return () => unsubscribe();
-  }, [showUsers]);
-
-  function handleManageUsersClick() {
-    setShowUsers(true);
-  }
-
-  async function handleDeleteUser(userId: string) {
-    if (!confirm("Are you sure you want to delete this user?")) return;
-    try {
-      await deleteDoc(doc(db, "users", userId));
-      alert("User deleted");
-    } catch (error) {
-      alert("Failed to delete user: " + error);
-    }
-  }
-
-  function startEditUser(user: AppUser) {
-    setEditUserId(user.id);
-    setEditUserData({
-      email: user.email,
-      role: user.role,
-      photoURL: user.photoURL || "",
-    });
-  }
-
-  function cancelEdit() {
-    setEditUserId(null);
-    setEditUserData({});
-  }
-
-  async function saveEditUser() {
-    if (!editUserId) return;
-    try {
-      const userRef = doc(db, "users", editUserId);
-      await updateDoc(userRef, {
-        email: editUserData.email,
-        role: editUserData.role,
-        photoURL: editUserData.photoURL,
+    const fetchAttendance = async () => {
+      const snap = await getDocs(collection(db, 'attendance'));
+      const today = new Date().toISOString().slice(0, 10);
+      let present = 0;
+      let absent = 0;
+      snap.docs.forEach((doc) => {
+        const data = doc.data();
+        if (data.date === today) {
+          if (data.status === 'Present') present++;
+          else absent++;
+        }
       });
-      setEditUserId(null);
-      setEditUserData({});
-      alert("User updated");
-    } catch (error) {
-      alert("Failed to update user: " + error);
-    }
-  }
+      setAttendanceToday({ present, absent });
+    };
 
-  async function handleChangePassword() {
-    setPasswordChangeStatus(null);
-    if (!firebaseUser || !firebaseUser.email) {
-      setPasswordChangeStatus("No authenticated user found.");
-      return;
-    }
-    if (!oldPassword || !newPassword) {
-      setPasswordChangeStatus("Please fill old and new password.");
-      return;
-    }
-    try {
-      const credential = EmailAuthProvider.credential(firebaseUser.email, oldPassword);
-      await reauthenticateWithCredential(firebaseUser, credential);
-      await updatePassword(firebaseUser, newPassword);
-      setPasswordChangeStatus("Password changed successfully!");
-      setOldPassword("");
-      setNewPassword("");
-    } catch (error: any) {
-      setPasswordChangeStatus("Failed to change password: " + error.message);
-    }
-  }
+    fetchAttendance();
+  }, []);
 
-  if (!firebaseUser || !appUser)
-    return <p className="text-center mt-10 animate-fadeIn">Loading user info...</p>;
+  useEffect(() => {
+    const today = new Date().toISOString().slice(5, 10); // MM-DD
+    const todayBirthdays = students.filter((s) => s.dob?.slice(5, 10) === today);
+    setBirthdaysToday(todayBirthdays);
+  }, [students]);
 
-  const activeUsersCount = users.length;
+  const filteredStudents = students.filter((s) =>
+    s.name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="p-8 max-w-7xl mx-auto space-y-12">
-      {/* Admin Profile & Welcome */}
-      <div className="flex items-center space-x-6 animate-fadeIn">
-        {appUser.photoURL ? (
-          <img
-            src={appUser.photoURL}
-            alt="Profile"
-            className="w-20 h-20 rounded-full object-cover border-4 border-blue-600 shadow-lg"
-          />
-        ) : (
-          <div className="w-20 h-20 rounded-full bg-gray-300 flex items-center justify-center text-3xl font-bold text-gray-700 border-4 border-blue-600 shadow-lg">
-            {appUser.email.charAt(0).toUpperCase()}
-          </div>
-        )}
-        <div>
-          <p className="text-3xl font-extrabold tracking-wide text-gray-900">
-            Welcome, {appUser.email}
-          </p>
-          <p className="text-gray-600 mt-1 text-lg font-semibold">Role: {appUser.role}</p>
-          <p className="mt-2 font-semibold text-blue-700 text-xl">
-            Active Users: {activeUsersCount}
-          </p>
+    <div className="p-8 space-y-10 animate-fadeIn">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold text-orange-600">Welcome, Principal 👨‍🏫</h1>
+        <p className="text-gray-600 mt-2 text-lg">School management insights and controls</p>
+      </div>
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <StatCard title="Students" count={stats.students} icon={<FaUserGraduate />} color="bg-blue-100" />
+        <StatCard title="Teachers" count={stats.teachers} icon={<FaChalkboardTeacher />} color="bg-green-100" />
+        <StatCard title="Classes" count={stats.classes} icon={<FaSchool />} color="bg-yellow-100" />
+        <StatCard title="Achievements" count={stats.achievements} icon={<FaTrophy />} color="bg-purple-100" />
+        <StatCard title="Events" count={stats.events} icon={<FaRegCalendarAlt />} color="bg-pink-100" />
+        <StatCard title="Notices" count={notices.length} icon={<FaBell />} color="bg-red-100" />
+        <StatCard title="Present Today" count={attendanceToday.present} icon={<FaClipboardList />} color="bg-green-100" />
+        <StatCard title="Absent Today" count={attendanceToday.absent} icon={<FaClipboardList />} color="bg-red-100" />
+      </div>
+
+      {/* 🔍 Search + User List */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Search Students</h2>
+        <input
+          type="text"
+          placeholder="Search by name..."
+          className="border p-2 rounded w-full max-w-md mb-4"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {filteredStudents.map((student) => (
+            <div
+              key={student.id}
+              className="bg-white shadow rounded p-4 hover:bg-gray-100 cursor-pointer"
+              onClick={() => setSelectedStudent(student)}
+            >
+              <h3 className="font-bold">{student.name}</h3>
+              <p className="text-sm">Class: {student.class}</p>
+              <p className="text-sm">Email: {student.email}</p>
+            </div>
+          ))}
         </div>
       </div>
 
-      {/* Navigation */}
-      <nav className="mb-8 space-x-6">
-        <button
-          onClick={handleManageUsersClick}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg shadow-md hover:bg-blue-700 transition transform hover:scale-105"
-        >
-          Manage Users
-        </button>
-        <button
-          onClick={() => signOut(auth)}
-          className="px-6 py-3 bg-red-600 text-white rounded-lg shadow-md hover:bg-red-700 transition transform hover:scale-105"
-        >
-          Sign Out
-        </button>
-      </nav>
-
-      {/* Users Table */}
-      {showUsers && (
-        <section className="animate-fadeIn">
-          <h2 className="text-3xl font-semibold mb-6 border-b border-gray-300 pb-2">
-            Users List
-          </h2>
-          {loadingUsers ? (
-            <p className="text-center text-lg font-medium text-gray-700">Loading users...</p>
-          ) : users.length === 0 ? (
-            <p className="text-center text-lg font-medium text-gray-700">No users found.</p>
-          ) : (
-            <div className="overflow-x-auto rounded-lg shadow-lg border border-gray-300">
-              <table className="min-w-full table-auto border-collapse border">
-                <thead className="bg-blue-100 text-blue-900 uppercase tracking-wide font-semibold text-sm select-none">
-                  <tr>
-                    <th className="border px-6 py-3">Photo</th>
-                    <th className="border px-6 py-3">Email</th>
-                    <th className="border px-6 py-3">Role</th>
-                    <th className="border px-6 py-3">Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {users.map((u) =>
-                    editUserId === u.id ? (
-                      <tr
-                        key={u.id}
-                        className="bg-yellow-50 border-t border-yellow-400 transition-all duration-300 ease-in-out"
-                      >
-                        <td className="border px-4 py-3">
-                          <input
-                            type="text"
-                            value={editUserData.photoURL || ""}
-                            onChange={(e) =>
-                              setEditUserData({ ...editUserData, photoURL: e.target.value })
-                            }
-                            placeholder="Photo URL"
-                            className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-400 transition"
-                          />
-                        </td>
-                        <td className="border px-4 py-3">
-                          <input
-                            type="email"
-                            value={editUserData.email || ""}
-                            onChange={(e) =>
-                              setEditUserData({ ...editUserData, email: e.target.value })
-                            }
-                            className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-400 transition"
-                          />
-                        </td>
-                        <td className="border px-4 py-3">
-                          <select
-                            value={editUserData.role || ""}
-                            onChange={(e) =>
-                              setEditUserData({ ...editUserData, role: e.target.value })
-                            }
-                            className="w-full border rounded p-2 focus:ring-2 focus:ring-blue-400 transition"
-                          >
-                            <option value="admin">Admin</option>
-                            <option value="user">User</option>
-                          </select>
-                        </td>
-                        <td className="border px-4 py-3 space-x-3 text-center">
-                          <button
-                            onClick={saveEditUser}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-1 rounded transition transform hover:scale-105"
-                          >
-                            Save
-                          </button>
-                          <button
-                            onClick={cancelEdit}
-                            className="bg-gray-400 hover:bg-gray-500 text-white px-4 py-1 rounded transition transform hover:scale-105"
-                          >
-                            Cancel
-                          </button>
-                        </td>
-                      </tr>
-                    ) : (
-                      <tr
-                        key={u.id}
-                        className="hover:bg-blue-50 cursor-pointer transition-colors"
-                      >
-                        <td className="border px-6 py-4 text-center">
-                          {u.photoURL ? (
-                            <img
-                              src={u.photoURL}
-                              alt="User Photo"
-                              className="w-12 h-12 rounded-full object-cover mx-auto"
-                            />
-                          ) : (
-                            <div className="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center mx-auto text-gray-700 font-semibold">
-                              {u.email.charAt(0).toUpperCase()}
-                            </div>
-                          )}
-                        </td>
-                        <td className="border px-6 py-4 break-words max-w-xs">{u.email}</td>
-                        <td className="border px-6 py-4 capitalize">{u.role}</td>
-                        <td className="border px-6 py-4 space-x-3 text-center whitespace-nowrap">
-                          <button
-                            onClick={() => startEditUser(u)}
-                            className="bg-yellow-400 hover:bg-yellow-500 text-gray-900 px-4 py-1 rounded transition transform hover:scale-105"
-                          >
-                            Edit
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(u.id)}
-                            className="bg-red-600 hover:bg-red-700 text-white px-4 py-1 rounded transition transform hover:scale-105"
-                          >
-                            Delete
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  )}
-                </tbody>
-              </table>
+      {/* 🎯 Top Performing Students */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Top Performing Students</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {students.slice(0, 3).map((s) => (
+            <div key={s.id} className="bg-white shadow p-4 rounded">
+              <h3 className="font-bold">{s.name}</h3>
+              <p>Class: {s.class}</p>
+              <p>🏆 Excellent performance</p>
             </div>
-          )}
-        </section>
+          ))}
+        </div>
+      </div>
+
+      {/* 🎂 Birthdays Today */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-800">🎂 Birthdays Today</h2>
+        {birthdaysToday.length > 0 ? (
+          <ul className="list-disc ml-6 text-gray-700">
+            {birthdaysToday.map((s) => (
+              <li key={s.id}>{s.name} (Class: {s.class})</li>
+            ))}
+          </ul>
+        ) : (
+          <p className="text-gray-500">No birthdays today</p>
+        )}
+      </div>
+
+      {/* 🧾 Student Detail Modal */}
+      {selectedStudent && (
+        <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg max-w-md w-full relative shadow-lg">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-black text-xl"
+              onClick={() => setSelectedStudent(null)}
+            >
+              ✕
+            </button>
+            <h3 className="text-xl font-bold mb-4">Student Details</h3>
+            <ul className="text-sm space-y-1">
+              <li><strong>Name:</strong> {selectedStudent.name}</li>
+              <li><strong>Class:</strong> {selectedStudent.class}</li>
+              <li><strong>Email:</strong> {selectedStudent.email}</li>
+              <li><strong>DOB:</strong> {selectedStudent.dob}</li>
+              <li><strong>Father's Name:</strong> {selectedStudent.fatherName}</li>
+              <li><strong>Address:</strong> {selectedStudent.address}</li>
+              <li><strong>Aadhar:</strong> {selectedStudent.aadhar}</li>
+            </ul>
+          </div>
+        </div>
       )}
 
-      {/* Password Change Section */}
-      <section className="max-w-md p-6 border rounded-lg shadow-md bg-white animate-fadeIn">
-        <h3 className="text-2xl font-semibold mb-4 border-b pb-2">Change Password</h3>
-        <div className="space-y-4">
-          <input
-            type="password"
-            placeholder="Old Password"
-            value={oldPassword}
-            onChange={(e) => setOldPassword(e.target.value)}
-            className="w-full border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-          />
-          <input
-            type="password"
-            placeholder="New Password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            className="w-full border rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-          />
-          <button
-            onClick={handleChangePassword}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition transform hover:scale-105"
-          >
-            Change Password
-          </button>
-          {passwordChangeStatus && (
-            <p
-              className={`mt-2 text-center font-semibold ${
-                passwordChangeStatus.includes("successfully") ? "text-green-600" : "text-red-600"
-              }`}
-            >
-              {passwordChangeStatus}
-            </p>
-          )}
+      {/* ⚡ Quick Actions */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Quick Actions</h2>
+        <div className="flex flex-wrap gap-4">
+          <ActionButton icon={<HiOutlineUserAdd />} label="Add Student" color="bg-orange-500" href="/add-student" />
+          <ActionButton icon={<FaClipboardList />} label="Add Notice" color="bg-blue-600" href="/add-notice" />
+          <ActionButton icon={<FaTrophy />} label="Add Achievement" color="bg-purple-600" href="/add-achievement" />
+          <ActionButton icon={<FaRegCalendarAlt />} label="Schedule Event" color="bg-green-600" href="/add-event" />
         </div>
-      </section>
+      </div>
 
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {opacity: 0;}
-          to {opacity: 1;}
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.6s ease forwards;
-        }
-      `}</style>
+      {/* 📢 Latest Notices */}
+      <div>
+        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Latest Notices</h2>
+        <ul className="list-disc ml-6 space-y-2 text-gray-700">
+          {notices.length > 0 ? (
+            notices.map((notice, idx) => <li key={idx}>📌 {notice}</li>)
+          ) : (
+            <li>No recent notices</li>
+          )}
+        </ul>
+      </div>
     </div>
+  );
+}
+
+// Reusable Components
+function StatCard({ title, count, icon, color }: { title: string; count: number; icon: JSX.Element; color: string }) {
+  return (
+    <div className={`p-6 rounded-lg shadow ${color} flex items-center gap-4`}>
+      <div className="text-3xl text-gray-700">{icon}</div>
+      <div>
+        <h3 className="text-lg font-medium text-gray-800">{title}</h3>
+        <p className="text-2xl font-bold text-gray-900">{count}</p>
+      </div>
+    </div>
+  );
+}
+
+function ActionButton({
+  icon,
+  label,
+  color,
+  href,
+}: {
+  icon: JSX.Element;
+  label: string;
+  color: string;
+  href: string;
+}) {
+  return (
+    <Link href={href}>
+      <div
+        className={`${color} hover:brightness-110 cursor-pointer text-white px-6 py-3 rounded-lg flex items-center gap-2 shadow`}
+      >
+        {icon}
+        {label}
+      </div>
+    </Link>
   );
 }

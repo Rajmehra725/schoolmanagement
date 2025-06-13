@@ -16,7 +16,8 @@ import {
   LogOut,
   Newspaper,
   MessageCircleHeartIcon,
-  HomeIcon
+  HomeIcon,
+  HeartHandshakeIcon as LoveIcon,
 } from 'lucide-react';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -45,6 +46,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   { label: 'Notification', href: '/dashboard/admin/notification', icon: Bell },
   { label: 'Blog', href: '/dashboard/admin/blog', icon: Newspaper },
   { label: 'Chat', href: '/dashboard/admin/chat', icon: MessageCircleHeartIcon },
+  { label: 'Love', href: '/dashboard/admin/Love', icon: LoveIcon },
   
 ];
 
