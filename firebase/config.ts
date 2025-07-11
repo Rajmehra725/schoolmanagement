@@ -5,13 +5,13 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCLDlU8ooBhoelGjkgreMR5LTPWD_rxeBY",
-  authDomain: "schoolmanagement-3340e.firebaseapp.com",
-  projectId: "schoolmanagement-3340e",
-  storageBucket: "schoolmanagement-3340e.appspot.com",  // corrected storageBucket URL
-  messagingSenderId: "176337630338",
-  appId: "1:176337630338:web:ef1e07a7248510513d309b",
-  measurementId: "G-TD4NWNZPNG"
+  apiKey: "AIzaSyDZ6VRPbF5oQUVpD6fhZZ-NaYcsFDN4h6k",
+  authDomain: "sunflower-73c06.firebaseapp.com",
+  projectId: "sunflower-73c06",
+  storageBucket: "sunflower-73c06.firebasestorage.app",
+  messagingSenderId: "339251583801",
+  appId: "1:339251583801:web:60b17a577c56f08b5326e8",
+  measurementId: "G-8JDQD1FH78"
 };
 
 const app = getApps().length ? getApp() : initializeApp(firebaseConfig);

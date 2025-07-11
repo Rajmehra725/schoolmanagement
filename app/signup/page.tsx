@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 
 import { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
@@ -63,16 +63,21 @@ export default function SignUpPage() {
           ...commonData,
           class: className,
         });
-      } else {
+      } else if (role === 'teacher') {
         await setDoc(doc(db, 'teachers', user.uid), {
           ...commonData,
           qualification,
           resumeUrl,
           subject,
         });
+      } else if (role === 'admin') {
+        await setDoc(doc(db, 'admins', user.uid), {
+          ...commonData,
+          createdAt: new Date().toISOString(),
+        });
       }
 
-      // ✅ Sync to users collection for login role access
+      // ✅ Save in users collection
       await setDoc(doc(db, 'users', user.uid), {
         name,
         email,
@@ -97,11 +102,21 @@ export default function SignUpPage() {
 
         {step === 1 && (
           <>
-            <select value={role} onChange={(e) => setRole(e.target.value)} className="w-full mb-4 p-3 border border-gray-300 rounded-lg bg-white">
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full mb-4 p-3 border border-gray-300 rounded-lg bg-white"
+            >
               <option value="student">Student</option>
               <option value="teacher">Teacher</option>
+             
             </select>
-            <button onClick={() => setStep(2)} className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition">Next</button>
+            <button
+              onClick={() => setStep(2)}
+              className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700 transition"
+            >
+              Next
+            </button>
           </>
         )}
 
@@ -135,6 +150,7 @@ export default function SignUpPage() {
                 <input type="text" placeholder="Resume URL" value={resumeUrl} onChange={(e) => setResumeUrl(e.target.value)} className="w-full mb-3 p-3 border border-gray-300 rounded-lg" />
               </>
             )}
+            {/* Admin ke liye yahan extra fields nahi diye gaye, zarurat ho to yahan add kar sakte ho */}
             <div className="flex justify-between mb-3">
               <button onClick={() => setStep(2)} className="bg-gray-300 px-4 py-2 rounded">Back</button>
               <button onClick={handleSignUp} disabled={loading} className="bg-green-600 text-white px-4 py-2 rounded flex items-center gap-2">
