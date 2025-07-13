@@ -1,240 +1,200 @@
+// Romantic Love Page with Password Protection ❤️
+
 'use client';
 
-import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+import { useEffect, useRef, useState } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 
-const loveLines = [
-  'Tumhari muskaan meri duniya hai 😍',
-  'Jab tum hasta ho, toh lagta hai jaise zindagi muskura rahi hai ✨',
-  'Tum ro deti ho toh meri rooh kaamp jaati hai 🥺',
-  'Aur jab tum hasta ho... toh main jeeta hoon 💖',
+const SECRET_PASSWORD = 'raaz@123';
+
+const images = [
+  { src: '/photos/1.jpeg', caption: '🌹 Jab tum aaye... zindagi mehka di ❤️' },
+  { src: '/photos/2.jpg', caption: '💫 Tumhara saath... meri har khushi ka raaz hai 💕' },
+  { src: '/photos/3.jpg', caption: '🥰 Tumhara hasna... meri jaan ki muskaan hai ✨' },
+  { src: '/photos/4.jpg', caption: '👩‍❤️‍👨 Tum ho... toh har din pyara hai 💖' },
 ];
 
-export default function SmileForYou() {
-  const [started, setStarted] = useState(false);
-  const [lineIndex, setLineIndex] = useState(0);
-  const [showLetter, setShowLetter] = useState(false);
-  const [showFinalHeart, setShowFinalHeart] = useState(false);
-  const [isClient, setIsClient] = useState(false);
-  const [hearts, setHearts] = useState<{ left: string; top: string; delay: string; emoji: string }[]>([]);
-  const [loveCount, setLoveCount] = useState(0);
-  const [showSecret, setShowSecret] = useState(false);
+const loveNote = `Meri Jaan... 💖
+AAP sirf meri mohabbat nahi ho... tum meri har subah 🌅 ka noor ho, meri har raat 🌙 ka sukoon ho. Tumhari muskaan 😊 meri rooh tak utar jaati hai, jaise khushbu kisi phool 🌸 mein basa ho. Jab tum meri taraf dekhti ho 👀, toh meri duniya ruk jaati hai 🛑... aur jab tum hasta ho 😄, toh meri zindagi phir se chal padti hai 💓. Tum roti ho 😢 toh meri raaton ki neend ud jaati hai 🌧️, aur tumhari khushi meri jeet ban jaati hai 🏆. Tumse sirf pyaar nahi, ibadat karta hoon 🙏... har dua mein sirf tumhara naam hota hai 💌. Zindagi ke har pal mein, har saans mein... bas tum hi tum ho 🫶. Tum meri duniya ho, mera raaz ho, meri har heartbeat ka sabse khoobsurat ehsaas ho 💖. Tum mujhe kabool ho, har janam ke liye 💍.`;
+
+export default function LoveSecretPage() {
+  const [isUnlocked, setIsUnlocked] = useState(false);
+  const [input, setInput] = useState('');
+  const [error, setError] = useState('');
+  const [index, setIndex] = useState(0);
+  const [replay, setReplay] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    setIsClient(true);
+    if (isUnlocked) {
+      if (!audioRef.current) {
+        const audio = new Audio('/music.mp3');
+        audio.loop = true;
+        audio.volume = 0.4;
+        audio.play().catch(() => {});
+        audioRef.current = audio;
+      }
 
-    const arr = Array.from({ length: 40 }).map((_, i) => ({
-      left: `${Math.random() * 100}%`,
-      top: `${Math.random() * 100}%`,
-      delay: `${i * 0.3}s`,
-      emoji: ['❤️', '💖', '😊', '💋', '🌹'][i % 5],
-    }));
-    setHearts(arr);
-  }, []);
+      const timer = setInterval(() => {
+        setIndex((prev) => {
+          if (prev === images.length - 1) {
+            clearInterval(timer);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, 5000);
 
-  const start = () => {
-    setStarted(true);
-    setLineIndex(0);
-    setShowLetter(false);
-    setShowFinalHeart(false);
+      return () => clearInterval(timer);
+    }
+  }, [isUnlocked, replay]);
+
+  const handleUnlock = () => {
+    if (input === SECRET_PASSWORD) {
+      setIsUnlocked(true);
+    } else {
+      setError('Galat password meri jaan 🥺');
+    }
   };
 
-  useEffect(() => {
-    if (started && lineIndex < loveLines.length - 1) {
-      const timer = setTimeout(() => {
-        setLineIndex((prev) => prev + 1);
-      }, 4000);
-      return () => clearTimeout(timer);
-    } else if (lineIndex === loveLines.length - 1) {
-      setTimeout(() => setShowLetter(true), 3000);
-    }
-  }, [lineIndex, started]);
+  const resetSlideshow = () => {
+    setIndex(0);
+    setReplay(!replay);
+  };
 
-  useEffect(() => {
-    if (started) {
-      const interval = setInterval(() => {
-        setLoveCount((prev) => prev + 1);
-      }, 1000);
-      return () => clearInterval(interval);
-    }
-  }, [started]);
-
-  if (!isClient) return null;
+  if (!isUnlocked) {
+    return (
+      <main className="min-h-screen flex flex-col items-center justify-center bg-black text-white p-6 text-center font-mono">
+        <h1 className="text-4xl font-bold mb-6 animate-pulse text-red-500">🔐 Secret Love Vault</h1>
+        <input
+          type="password"
+          placeholder="Enter Secret Password..."
+          value={input}
+          onChange={(e) => {
+            setInput(e.target.value);
+            setError('');
+          }}
+          className="px-4 py-2 text-black rounded-md border border-gray-300 shadow-md mb-3 w-72"
+        />
+        <button
+          onClick={handleUnlock}
+          className="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded-full shadow-lg"
+        >
+          Unlock ❤️
+        </button>
+        {error && <p className="mt-4 text-red-400">{error}</p>}
+      </main>
+    );
+  }
 
   return (
-    <main className="relative min-h-screen bg-gradient-to-br from-pink-100 via-pink-200 to-pink-300 flex flex-col items-center justify-center text-center p-6 overflow-hidden text-pink-900 font-serif">
-
-      {/* Floating Emoji Rain */}
-      <div className="absolute inset-0 -z-10 opacity-20 pointer-events-none">
-        {hearts.map((h, i) => (
+    <main className="min-h-screen bg-gradient-to-br from-red-200 via-red-300 to-red-400 flex flex-col items-center justify-center text-center p-6 relative overflow-hidden text-red-900 font-serif">
+      <div className="absolute inset-0 pointer-events-none z-0 opacity-40">
+        {[...Array(30)].map((_, i) => (
           <div
             key={i}
             className="absolute text-2xl animate-bounce"
             style={{
-              left: h.left,
-              top: h.top,
-              animationDelay: h.delay,
+              left: `${Math.random() * 100}%`,
+              top: `${Math.random() * 100}%`,
+              animationDelay: `${Math.random() * 3}s`,
             }}
           >
-            {h.emoji}
+            {['❤️', '💋', '🌹', '💖', '🔥'][i % 5]}
           </div>
         ))}
       </div>
 
-      {/* Firefly-style Flickering */}
       <div className="absolute inset-0 pointer-events-none z-0">
-        {[...Array(20)].map((_, i) => (
+        {[...Array(30)].map((_, i) => (
           <div
             key={i}
-            className="absolute text-xl animate-pulse"
+            className="absolute w-1.5 h-1.5 bg-white rounded-full opacity-70 animate-ping"
             style={{
               left: `${Math.random() * 100}%`,
               top: `${Math.random() * 100}%`,
-              animationDuration: `${2 + Math.random() * 2}s`,
+              animationDuration: `${2 + Math.random() * 3}s`,
+              animationDelay: `${Math.random()}s`,
             }}
-          >
-            {['💖', '✨', '🌟'][i % 3]}
-          </div>
+          />
         ))}
       </div>
 
-      {!started ? (
-        <>
-          <motion.h1
-            initial={{ opacity: 0, scale: 0.8 }}
+      <h1 className="text-4xl font-bold mb-4 animate-pulse">Meri Pyaari Jaan ❤️</h1>
+      <p className="text-red-700 text-sm mb-2 animate-bounce">🎶 Romantic music playing...</p>
+
+      <div className="relative w-[300px] h-[300px] md:w-[400px] md:h-[400px] rounded-xl overflow-hidden shadow-2xl border-4 border-red-300 bg-white z-10">
+        <AnimatePresence mode="wait">
+          <motion.img
+            key={images[index].src}
+            src={images[index].src}
+            alt={`photo-${index}`}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 1.1 }}
             transition={{ duration: 0.8 }}
-            className="text-4xl md:text-5xl font-bold mb-6"
+            className="w-full h-full object-cover"
+          />
+        </AnimatePresence>
+      </div>
+
+      <motion.p
+        key={index}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+        className="mt-4 text-lg md:text-xl font-medium max-w-md"
+      >
+        {images[index].caption}
+      </motion.p>
+
+      {index === images.length - 1 && (
+        <>
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 1 }}
+            className="mt-8 text-2xl font-bold text-red-900"
           >
-            Meli Sweetheart Jaan 💌
-          </motion.h1>
+            💍 Tum meri duniya ho... shaadi karogi na?
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 1.5, duration: 1.2 }}
+            className="mt-6 bg-white bg-opacity-80 text-red-800 p-4 rounded-lg shadow-xl max-w-lg text-left text-sm sm:text-base"
+          >
+            <pre className="whitespace-pre-line font-serif">{loveNote}</pre>
+          </motion.div>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 2.8, duration: 1.5 }}
+            className="mt-6 italic text-red-900 text-lg"
+          >
+            🌙 "Main tumhara hoon... hamesha. Tum bas muskurana mat chhodna." 💫
+          </motion.p>
+
           <motion.button
             whileTap={{ scale: 0.95 }}
-            onClick={start}
-            className="bg-pink-600 text-white px-6 py-3 rounded-full text-xl shadow-lg hover:bg-pink-700"
+            onClick={resetSlideshow}
+            className="mt-6 bg-red-600 text-white px-6 py-2 rounded-full shadow-md hover:bg-red-700"
           >
-            Click & Smile For Me 💖
+            🔁 Phir se dekhna hai ❤️
           </motion.button>
         </>
-      ) : (
-        <motion.div
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 1 }}
-          className="max-w-xl"
-        >
-          <h2 className="text-3xl md:text-4xl font-bold mb-4 animate-pulse">
-            Tumhara Hasna Sabse Khoobsurat Cheez Hai 💫
-          </h2>
-
-          {/* Typewriter-Style Love Lines */}
-          <p className="text-xl italic text-pink-800 min-h-[4rem] transition-all duration-500">
-            {loveLines[lineIndex]}
-          </p>
-
-          {/* Music Bars */}
-          <div className="flex justify-center mt-4 space-x-1">
-            {[...Array(5)].map((_, i) => (
-              <div
-                key={i}
-                className="w-1 h-6 bg-pink-500 animate-pulse"
-                style={{ animationDelay: `${i * 0.2}s` }}
-              ></div>
-            ))}
-          </div>
-
-          {/* Hug Emoji Bounce */}
-          <div className="mt-8 text-6xl animate-bounce">😊🤗💖</div>
-
-          <p className="mt-6 text-lg leading-relaxed">
-            Meli Princess 👑, Meli Baby Jaan 💋, Meli Cute Sa Smile Machine 🥰 —  
-            Tum muskura do toh duniya jeetne ka mann karta hai!
-          </p>
-
-          <div className="mt-6 text-lg text-pink-700 font-semibold">
-            I’ve said “I love you” <span className="text-pink-900 font-bold">{loveCount}</span> times in my heart ❤️
-          </div>
-
-          {/* Love Letter Section */}
-          {showLetter && (
-            <motion.div
-              initial={{ opacity: 0, y: 50 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1 }}
-              className="mt-10 bg-white bg-opacity-80 p-4 rounded-lg shadow-lg text-pink-800"
-            >
-              <h3 className="text-2xl font-semibold mb-2">✍️ Ek Chitthi Tumhare Naam</h3>
-              <p>
-                Meri Jaan,  
-                Tum roti ho toh mujhe duniya se shikayat hoti hai.  
-                Par jab tum hasta ho... toh lagta hai saari zindagi jeet gaya.  
-                Tum meri khushi ho. Tum meri dua ho.  
-                Sirf ek baar muskura do — meli rooh ko sukoon mil jayega 💖
-              </p>
-            </motion.div>
-          )}
-
-          {/* Secret Reveal */}
-          {showLetter && (
-            <div className="mt-10">
-              {!showSecret ? (
-                <button
-                  onClick={() => setShowSecret(true)}
-                  className="bg-pink-700 text-white px-5 py-2 rounded-full hover:bg-pink-800 shadow-md"
-                >
-                  🔓 Tap to reveal a secret
-                </button>
-              ) : (
-                <motion.div
-                  initial={{ scale: 0.8, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ duration: 1 }}
-                  className="mt-4 text-xl text-pink-900 font-semibold"
-                >
-                  Tum roti ho toh meri duniya andheri ho jaati hai...  
-                  Tum hasta ho toh meri zindagi mein roshni aa jaati hai.  
-                  💖 *Mujhe sirf tumhari muskaan chahiye... zindagi bhar ke liye.* 💍
-                </motion.div>
-              )}
-            </div>
-          )}
-
-          {/* Sparkling Heart */}
-          {showLetter && (
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ delay: 2, duration: 1 }}
-              className="mt-10 text-5xl hover:animate-spin cursor-pointer"
-            >
-              🌟❤️
-            </motion.div>
-          )}
-
-          {/* Moonlight Romantic Ending */}
-          {showLetter && (
-            <>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 3, duration: 1 }}
-                className="mt-6 text-xl text-pink-900 italic"
-              >
-                🌙 Under this moon... just smile and say, "I’m yours, Raaz." 💍
-              </motion.p>
-
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 4, duration: 1.2 }}
-                className="mt-10 text-2xl font-bold bg-gradient-to-r from-red-500 via-pink-500 to-purple-600 bg-clip-text text-transparent"
-              >
-                🌈 I Promise... I'll Keep Making You Smile, Forever 💫
-              </motion.p>
-            </>
-          )}
-        </motion.div>
       )}
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 3 }}
+        className="absolute bottom-5 text-xl font-bold text-red-600 animate-pulse"
+      >
+        ❤️ I love you... I love you... I love you... 🫀
+      </motion.div>
     </main>
   );
 }
