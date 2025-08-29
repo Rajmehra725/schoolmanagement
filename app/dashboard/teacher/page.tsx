@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { getCurrentUser, CurrentUserData } from "@/lib/getCurrentUser";
 import { signOut } from "firebase/auth";
 import { auth } from "@/firebase/config";
+import PerformanceStats from "@/components/teacher/PerformanceStats";
 
 export default function TeacherDashboard() {
   const [user, setUser] = useState<CurrentUserData | null>(null);
@@ -86,7 +87,7 @@ useEffect(() => {
 
         <div className="bg-white p-4 rounded-xl shadow">
           <h2 className="text-lg font-semibold mb-2 text-green-600">📊 Performance Stats</h2>
-          <p className="text-sm text-gray-600">Feature under development.</p>
+          <PerformanceStats />
         </div>
 
         <div className="bg-white p-4 rounded-xl shadow">
