@@ -10,23 +10,23 @@ import confetti from 'canvas-confetti';
 const SECRET_PASSWORD = 'raaz@123';
 
 const memories = [
-  { text: '💖 Pehli baar jab tum mili thi, dil ne bola — "Bas yehi meri Jaan hai!"', img: '/photos/1.jpeg' },
-  { text: '🌸 Tumhari hasi mere din ki shuruaat hai ☀️', img: '/photos/2.jpg' },
-  { text: '💫 Tum mere life ka sabse beautiful part ho 💕', img: '/photos/3.jpg' },
+  { text: '💖 Pehli baar jab Aap mili thi, dil ne bola — "Bas yehi meli Jaan hai!"', img: '/photos/1.jpeg' },
+  { text: '🌸 Aaapki hasi mere din ki shuruaat hai ☀️', img: '/photos/2.jpg' },
+  { text: '💫 Aap mele life ka sabse beautiful part ho 💕', img: '/photos/3.jpg' },
 ];
 
 const romanticPhotos = ['/photos/romantic1.jpg', '/photos/romantic2.jpg', '/photos/romantic3.jpg'];
 
 const flirtMessages = [
-  "Uff! Tumhari smile to mera battery recharge kar deti hai 🔋💞",
-  "Babu! Tumhari aankhon mein galaxy hai 💫",
-  "Shona, tum meri coffee ho ☕ — bina tumhare subah adhoori lagti hai 😘",
-  "Tumhe dekh kar dil ne bola – 'ummmmmaaaah 💋'",
-  "Cutiepie 🍓, tum meri zindagi ki sabse pyaari chapter ho 💖",
-  "Tere bina dil bore ho jata hai 😢, tere saath dil dance kare 💃🕺",
+  "Uff! AApki smile to mela battery recharge kar deti hai 🔋💞",
+  "Babu! Aapki aankhon mein galaxy hai 💫",
+  "Shona, AAp meli coffee ho ☕ — bina Aapki subah adhoori lagti hai 😘",
+  "AApko dekh kar dil ne bola – 'ummmmmaaaah 💋'",
+  "Cutiepie 🍓, Aap meri zindagi ki sabse pyaali chapter ho 💖",
+  "Aapke bina dil bore ho jata hai 😢, Aapke saath dil dance kare 💃🕺",
 ];
 
-const cuteNames = ["My Boo Boo 💕", "Cutiepie 🧁", "Shona Baby 💋", "Sweetu 🍓", "Gulabo 🌸"];
+const cuteNames = [" Boo Boo 💕", "Cutiepie 🧁", "Deepu Baby 💋", "Sweetu 🍓", "SweetHeart 🌸"];
 
 export default function BirthdaySurprise() {
   const [step, setStep] = useState(0);
@@ -50,7 +50,7 @@ export default function BirthdaySurprise() {
   // Background music
   useEffect(() => {
   if (step > 0 && !bgMusic) {
-    const music = new Audio('/audio/romantic.mp3');
+    const music = new Audio('/romantic.mp3');
     music.loop = true;
     music.volume = 0.3;
     music.play().catch(() => {});
@@ -87,7 +87,7 @@ export default function BirthdaySurprise() {
     if (passwordInput === SECRET_PASSWORD) {
       setStep(1);
       confetti({ particleCount: 120, spread: 90, origin: { y: 0.6 } });
-      playSound('/audio/kiss.mp3');
+      playSound('/kiss.mp3');
     } else {
       setError('Galat password meri jaan 🥺');
     }
@@ -106,7 +106,7 @@ export default function BirthdaySurprise() {
         kiss.style.top = Math.random() * 80 + 'vh';
         kiss.onclick = () => {
           setKissesCaught((prev) => prev + 1);
-          playSound('/audio/kiss.mp3');
+          playSound('/kiss.mp3');
           kiss.remove();
         };
         document.body.appendChild(kiss);
@@ -128,7 +128,7 @@ export default function BirthdaySurprise() {
       {/* Step 0: Lock Screen */}
       {step === 0 && (
         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="w-full max-w-md p-6 bg-white rounded-xl shadow-lg">
-          <h1 className="text-3xl font-bold text-red-600 mb-4 animate-pulse">🔐 Meri {cuteNames[nicknameIndex]} ka Secret ❤️</h1>
+          <h1 className="text-3xl font-bold text-red-600 mb-4 animate-pulse">🔐 Meli {cuteNames[nicknameIndex]} ka Secret ❤️</h1>
           <p className="text-sm mb-4">Password daalo meri jaan aur apni dreamy duniya unlock karo 😘</p>
           <input
             type="password"
@@ -233,7 +233,7 @@ Tera naam sunte hi dil kehta hai — ummmmmmaaaah 💋💋\n\nForever yours,\nTu
           <button
             onClick={() => {
               confetti({ particleCount: 300, spread: 120, origin: { y: 0.6 } });
-              playSound('/audio/kiss.mp3');
+              playSound('/kiss.mp3');
               setGameStarted(true);
               setStep(6);
             }}
@@ -254,7 +254,7 @@ Tera naam sunte hi dil kehta hai — ummmmmmaaaah 💋💋\n\nForever yours,\nTu
             <button
               onClick={() => {
                 setGameStarted(false);
-                playSound('/audio/kiss.mp3');
+                playSound('/kiss.mp3');
                 confetti({ particleCount: 400, spread: 150, origin: { y: 0.6 } });
                 setStep(7);
               }}
@@ -272,8 +272,32 @@ Tera naam sunte hi dil kehta hai — ummmmmmaaaah 💋💋\n\nForever yours,\nTu
           <h2 className="text-3xl font-bold text-pink-600 mb-4">🎉 Forever Together 💞</h2>
           <p className="mb-4">Ab se har birthday hum saath manayenge 💍💋</p>
           <p className="text-lg font-semibold animate-pulse">“Ummmmmmmaaaahhhhh 💋💋💋”</p>
+            <button onClick={handleNextStep} className="absolute bottom-10 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-full font-semibold">
+            Ab hamali memories 😜
+          </button>
         </motion.div>
       )}
+      {/* Step 8: Personal Memories */}
+{step === 8 && (
+  <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full max-w-md p-4 bg-white rounded-xl shadow-lg overflow-y-auto max-h-[60vh]">
+    <h2 className="text-xl font-bold text-pink-600 mb-4">Special Memories 💖</h2>
+    {[
+      { text: 'Pehli date ka din – yaad hai jab hum park gaye the 🌸', img: '/photos/mem1.jpg' },
+      { text: 'Birthday surprise jo tumne mujhe diya tha 🎁', img: '/photos/mem2.jpg' },
+      { text: 'Hamari beach trip ka fun moments 🏖️', img: '/photos/mem3.jpg' },
+    ].map((mem, idx) => (
+      <div key={idx} className="mb-4">
+        <img src={mem.img} alt={`personal-memory-${idx}`} className="w-full h-32 object-cover rounded-md mb-2" />
+        <p className="text-sm text-red-700">{mem.text}</p>
+      </div>
+    ))}
+    <button onClick={() => setStep(7)} className="mt-2 bg-pink-600 hover:bg-pink-700 text-white py-2 px-4 rounded-full font-semibold">
+      Back to Final Ending 💞
+    </button>
+  </motion.div>
+)}
+
+      
     </main>
   );
 }
