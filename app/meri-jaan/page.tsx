@@ -212,10 +212,10 @@ export default function BirthdaySurprise() {
           <div className="bg-white rounded-xl p-6 max-w-md text-left relative">
             <h3 className="text-2xl font-bold text-red-600 mb-3">💌 Meri Pyari Jaan ke Naam 💋</h3>
             <p className="text-sm text-gray-700 whitespace-pre-line leading-relaxed">
-              {`Meri Jaan,\n\nJabse tum meri life me aayi ho, sab kuch beautiful lagta hai. 💫  
-Tum meri muskaan ho, mera sukoon ho, meri khushi ho 💖  
-Tere bina duniya adhuri lagti hai…  
-Tera naam sunte hi dil kehta hai — ummmmmmaaaah 💋💋\n\nForever yours,\nTumhara pagal 😘`}
+              {`Meli Jaan,\n\nJabse Aap meli life me aayi ho, sab kuch beautiful lagta hai. 💫  
+Aap meli muskaan ho, mela sukoon ho, meli khushi ho 💖  
+Aapke bina duniya adhuri lagti hai…  
+Aapka naam sunte hi dil kehta hai — ummmmmmaaaah 💋💋\n\nForever yours,\nAapka pagal 😘💋💋`}
             </p>
             <button onClick={() => setShowLetter(false)} className="mt-4 bg-pink-600 hover:bg-pink-700 text-white py-2 px-4 rounded-full font-semibold">
               Close 💞
@@ -227,8 +227,8 @@ Tera naam sunte hi dil kehta hai — ummmmmmaaaah 💋💋\n\nForever yours,\nTu
       {/* Step 5: Proposal */}
       {step === 5 && (
         <motion.div initial={{ scale: 0.8, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} className="w-full max-w-md p-6 bg-white rounded-xl shadow-lg">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">💖 Meri Jaan…</h2>
-          <p className="mb-4">Tum meri duniya ho, meri life ka best decision ho 🥺💞</p>
+          <h2 className="text-2xl font-bold text-red-600 mb-4">💖 Meli Jaan…</h2>
+          <p className="mb-4">Aap meli duniya ho, meli life ka best decision ho 🥺💞</p>
           <h3 className="text-xl font-bold mb-2">Will you marry me? 💍</h3>
           <button
             onClick={() => {
@@ -282,9 +282,9 @@ Tera naam sunte hi dil kehta hai — ummmmmmaaaah 💋💋\n\nForever yours,\nTu
   <motion.div initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="w-full max-w-md p-4 bg-white rounded-xl shadow-lg overflow-y-auto max-h-[60vh]">
     <h2 className="text-xl font-bold text-pink-600 mb-4">Special Memories 💖</h2>
     {[
-      { text: 'Pehli date ka din – yaad hai jab hum park gaye the 🌸', img: '/photos/mem1.jpg' },
-      { text: 'Birthday surprise jo tumne mujhe diya tha 🎁', img: '/photos/mem2.jpg' },
-      { text: 'Hamari beach trip ka fun moments 🏖️', img: '/photos/mem3.jpg' },
+      { text: 'Pehli date ka din – yaad hai jab ham achool me chhupke mile the kinna sukoon bhara pal tha na meli boo boo 🌸', img: '/photos/mem1.jpg' },
+      { text: 'gift jo Aapne  mujhe diya tha 🎁', img: '/photos/mem2.jpg' },
+      { text: 'Hamala room me milne ka sukoon bhara pal , aap mere liye behad spacial ho mele betu ,i love u so much meli cute si princess💋💋💋 🏖️', img: '/photos/mem3.jpg' },
     ].map((mem, idx) => (
       <div key={idx} className="mb-4">
         <img src={mem.img} alt={`personal-memory-${idx}`} className="w-full h-32 object-cover rounded-md mb-2" />
