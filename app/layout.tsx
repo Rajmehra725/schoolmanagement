@@ -18,7 +18,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "School Management System",
+  title: "Meli Boo Boo Bday Spacial",
   description: "Manage students, teachers, attendance and fees with ease using Next.js and Firebase.",
   keywords: ["School Management System", "Next.js", "Firebase", "Attendance", "Students", "Teachers", "Fees"],
   authors: [{ name: "Raaz Mehra" }],
