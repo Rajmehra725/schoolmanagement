@@ -4,16 +4,19 @@ import React, { useEffect, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import confetti from 'canvas-confetti';
 
+
+
 // ---------- CONFIG ----------
-const SECRET_PASSWORD = 'raaz@123';
+const SECRET_PASSWORD = 'Betu';
 
 const memories = [
   { text: '💖 Pehli baar jab Aap mili thi, dil ne bola — "Bas yehi meli Jaan hai!"', img: '/photos/1.jpeg' },
-  { text: '🌸 Aaapki hasi mere din ki shuruaat hai ☀️', img: '/photos/2.jpg' },
-  { text: '💫 Aap mele life ka sabse beautiful part ho 💕', img: '/photos/3.jpg' },
+  { text: '🌸 Aaapki hasi mere din ki shuruaat hai ☀️', img: '/photos/2.jpeg' },
+  { text: '💫 Aap mele life ka sabse beautiful part ho 💕', img: '/photos/3.jpeg' },
+  { text: '💫 I love you so much meli jaan 💕', img: '/photos/4.jpeg' },
 ];
 
-const romanticPhotos = ['/photos/romantic1.jpg', '/photos/romantic2.jpg', '/photos/romantic3.jpg'];
+const romanticPhotos = ['/photos/romantic1.jpeg', '/photos/romantic2.jpeg', '/photos/romantic3.jpeg', '/photos/romantic4.jpeg'];
 
 const flirtMessages = [
   "Uff! AApki smile to mela battery recharge kar deti hai 🔋💞",
@@ -33,8 +36,8 @@ const playAudio = (audioRef: React.MutableRefObject<HTMLAudioElement | null>, sr
     audioRef.current.src = src;
     audioRef.current.loop = loop;
     audioRef.current.volume = volume;
-    audioRef.current.play().catch(() => {});
-  } catch {}
+    audioRef.current.play().catch(() => { });
+  } catch { }
 };
 
 const fadeOutAudio = (audio: HTMLAudioElement | null, duration = 600) => {
@@ -242,8 +245,8 @@ export default function MeliJaanBirthdaySurprise(): JSX.Element {
               {/* Lock card below */}
               <div className="mt-6 w-full max-w-md mx-auto">
                 <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="p-6 bg-white rounded-xl shadow-lg">
-                  <h2 className="text-3xl font-bold text-red-600 mb-4 animate-pulse">🔐 Meli {cuteNames[nicknameIndex]} ka Secret ❤️</h2>
-                  <p className="text-sm mb-4">Password daalo meri jaan aur apni dreamy duniya unlock karo 😘</p>
+                  <h2 className="text-3xl font-bold text-red-600 mb-4 animate-pulse">🔐 Meli {cuteNames[nicknameIndex]} ka Birthday Spacial ❤️</h2>
+                  <p className="text-sm mb-4">Password daalo meli jaan aur apni dreamy duniya unlock karo 😘</p>
                   <input
                     aria-label="secret-password"
                     type="password"
@@ -274,32 +277,138 @@ export default function MeliJaanBirthdaySurprise(): JSX.Element {
           </motion.div>
         )}
 
-        {/* Memories */}
         {step === 2 && (
-          <motion.div key="mems" initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-md p-4 bg-white rounded-xl shadow-lg overflow-y-auto max-h-[60vh]">
-            <h2 className="text-xl font-bold text-pink-600 mb-4">Hamari Yaadein 🥰</h2>
-            {memories.map((mem, idx) => (
-              <div key={idx} className="mb-4">
-                <img src={mem.img} alt={`memory-${idx}`} className="w-full h-32 object-cover rounded-md mb-2" />
-                <p className="text-sm text-red-700">{mem.text}</p>
-              </div>
-            ))}
-            <div className="flex justify-between gap-2">
-              <button onClick={() => nextStep(1)} className="mt-2 bg-gray-200 text-gray-800 py-2 px-4 rounded-full">Back</button>
-              <button onClick={() => nextStep(3)} className="mt-2 bg-pink-600 hover:bg-pink-700 text-white py-2 px-4 rounded-full">Romantic Photos 💋</button>
+          <motion.div
+            key="mems"
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.8, ease: 'easeOut' }}
+            className="w-full max-w-md p-4 bg-gradient-to-b from-pink-50 to-white rounded-2xl shadow-xl overflow-y-auto max-h-[70vh]"
+          >
+            <h2 className="text-2xl font-extrabold text-center text-pink-600 mb-5 drop-shadow-sm">
+              Hamari Yaadein 🥰
+            </h2>
+
+            {/* Memories Section */}
+            <div className="space-y-5">
+              {memories.map((mem, idx) => (
+                <motion.div
+                  key={idx}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: idx * 0.2 }}
+                  className="bg-pink-100/60 backdrop-blur-sm rounded-2xl shadow-lg p-3 hover:scale-[1.02] transition-all duration-300"
+                >
+                  <div className="rounded-2xl overflow-hidden shadow-md">
+                    <img
+                      src={mem.img}
+                      alt={`memory-${idx}`}
+                      className="w-full h-72 object-cover rounded-2xl"
+                    />
+                  </div>
+                  <p className="text-center text-sm text-red-600 mt-2 italic font-medium">
+                    {mem.text}
+                  </p>
+                </motion.div>
+              ))}
+            </div>
+
+            {/* Buttons */}
+            <div className="flex justify-between gap-2 mt-6">
+              <button
+                onClick={() => nextStep(1)}
+                className="bg-gray-200 text-gray-800 py-2 px-5 rounded-full hover:bg-gray-300 transition"
+              >
+                ⬅️ Back
+              </button>
+              <button
+                onClick={() => nextStep(3)}
+                className="bg-pink-600 hover:bg-pink-700 text-white py-2 px-5 rounded-full transition"
+              >
+                Romantic Photos 💋
+              </button>
             </div>
           </motion.div>
         )}
 
-        {/* Romantic Photos */}
-        {step === 3 && (
-          <motion.div key="photos" initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-2xl p-4 bg-white rounded-xl shadow-lg overflow-x-auto flex gap-4">
-            {romanticPhotos.map((photo, idx) => (
-              <img key={idx} src={photo} alt={`romantic-${idx}`} className="w-40 h-40 object-cover rounded-lg shadow-md transform hover:scale-105 transition" />
-            ))}
-            <button onClick={() => nextStep(4)} className="absolute bottom-10 bg-red-600 hover:bg-red-700 text-white py-2 px-4 rounded-full font-semibold">Aao flirty mood 😜</button>
+      {/* Romantic Photos */}
+{step === 3 && (
+  <motion.div
+    key="photos"
+    initial={{ scale: 0.9, opacity: 0 }}
+    animate={{ scale: 1, opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.8, ease: 'easeOut' }}
+    className="relative w-full max-w-2xl p-5 bg-gradient-to-b from-pink-50 to-white rounded-2xl shadow-2xl overflow-hidden"
+  >
+    {/* Floating hearts animation layer */}
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      <div className="animate-[float_6s_infinite_linear] text-pink-300 absolute top-10 left-10 text-3xl">💖</div>
+      <div className="animate-[float_8s_infinite_linear] text-red-400 absolute top-20 right-10 text-2xl">💞</div>
+      <div className="animate-[float_10s_infinite_linear] text-pink-400 absolute bottom-16 left-16 text-4xl">💋</div>
+    </div>
+
+    {/* Title */}
+    <h2 className="text-2xl font-extrabold text-center text-pink-600 mb-5 drop-shadow-sm">
+      Romantic Moments 💋
+    </h2>
+
+    {/* Scrollable photo strip */}
+    <div className="flex gap-4 overflow-x-auto pb-4 px-2 snap-x snap-mandatory">
+      {romanticPhotos.map((photo, idx) => (
+        <motion.div
+          key={idx}
+          whileHover={{ scale: 1.05, rotate: idx % 2 === 0 ? 1.5 : -1.5 }}
+          transition={{ type: "spring", stiffness: 200 }}
+          className="relative flex-shrink-0 snap-center bg-gradient-to-tr from-pink-200 via-white to-pink-100 p-2 rounded-2xl shadow-lg"
+        >
+          <img
+            src={photo}
+            alt={`romantic-${idx}`}
+            className="w-48 h-72 object-cover rounded-xl shadow-md border-4 border-pink-300/60"
+          />
+          {/* Small heart glow */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            whileHover={{ opacity: 1, scale: 1.2 }}
+            className="absolute bottom-3 right-3 text-pink-500 text-2xl"
+          >
+            💖
           </motion.div>
-        )}
+        </motion.div>
+      ))}
+    </div>
+
+    {/* Auto-scroll animation (gentle left-right loop) */}
+    <style>{`
+      @keyframes float {
+        0%, 100% { transform: translateY(0); opacity: 1; }
+        50% { transform: translateY(-20px); opacity: 0.8; }
+      }
+    `}</style>
+
+    {/* Bottom button with shimmer */}
+    <motion.button
+      onClick={() => nextStep(4)}
+      whileHover={{ scale: 1.1 }}
+      whileTap={{ scale: 0.95 }}
+      className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-gradient-to-r from-pink-600 to-red-500 text-white py-2 px-6 rounded-full font-semibold shadow-lg hover:shadow-2xl transition-all relative overflow-hidden"
+    >
+      <span className="relative z-10">Aao flirty mood 😜</span>
+      <span className="absolute inset-0 bg-gradient-to-r from-white/30 via-transparent to-white/30 animate-[shimmer_2s_infinite]" />
+    </motion.button>
+
+    {/* Button shimmer effect */}
+    <style>{`
+      @keyframes shimmer {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(100%); }
+      }
+    `}</style>
+  </motion.div>
+)}
+
 
         {/* Flirty Messages */}
         {step === 4 && (
@@ -371,27 +480,82 @@ export default function MeliJaanBirthdaySurprise(): JSX.Element {
             </div>
           </motion.div>
         )}
+{/* Step 8: Personal Memories */}
+{step === 8 && (
+  <motion.div
+    key="personal"
+    initial={{ y: 50, opacity: 0 }}
+    animate={{ y: 0, opacity: 1 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.8, ease: 'easeOut' }}
+    className="w-full max-w-md p-4 bg-gradient-to-b from-pink-50 to-white rounded-2xl shadow-xl overflow-y-auto max-h-[70vh]"
+  >
+    <h2 className="text-2xl font-extrabold text-center text-pink-600 mb-5 drop-shadow-sm">
+      Special Memories 💖
+    </h2>
 
-        {/* Step 8: Personal Memories */}
-        {step === 8 && (
-          <motion.div key="personal" initial={{ y: 50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }} className="w-full max-w-md p-4 bg-white rounded-xl shadow-lg overflow-y-auto max-h-[60vh]">
-            <h2 className="text-xl font-bold text-pink-600 mb-4">Special Memories 💖</h2>
-            {[
-              { text: 'Pehli date ka din – yaad hai jab ham achool me chhupke mile the kinna sukoon bhara pal tha na meli boo boo 🌸', img: '/photos/mem1.jpg' },
-              { text: 'gift jo Aapne  mujhe diya tha 🎁', img: '/photos/mem2.jpg' },
-              { text: 'Hamala room me milne ka sukoon bhara pal , aap mere liye behad spacial ho mele betu ,i love u so much meli cute si princess💋💋💋 🏖️', img: '/photos/mem3.jpg' },
-            ].map((mem, idx) => (
-              <div key={idx} className="mb-4">
-                <img src={mem.img} alt={`personal-memory-${idx}`} className="w-full h-32 object-cover rounded-md mb-2" />
-                <p className="text-sm text-red-700">{mem.text}</p>
-              </div>
-            ))}
-            <div className="flex gap-2 justify-between">
-              <button onClick={() => setStep(7)} className="mt-2 bg-gray-200 text-gray-800 py-2 px-4 rounded-full">Back</button>
-              <button onClick={() => { setStep(0); setKissesCaught(0); setGameStarted(false); document.body.classList.remove('meli-night-sky'); }} className="mt-2 bg-pink-600 hover:bg-pink-700 text-white py-2 px-4 rounded-full">Restart</button>
-            </div>
-          </motion.div>
-        )}
+    <div className="space-y-5">
+      {[
+        {
+          text: 'Pehli date ka din – yaad hai jab ham school me chhupke mile the... kinna sukoon bhara pal tha na meli boo boo 🌸',
+          img: '/photos/mem1.jpeg',
+        },
+        {
+          text: 'Gift jo aapne mujhe diya tha 🎁 — ab tak sambhal ke rakha hai meli jaan ke pyaar ka nishaan 💞',
+          img: '/photos/mem3.jpeg',
+        },
+        {
+          text: 'Hamala room me milne ka sukoon bhara pal... aap mere liye behad spacial ho meli betu 💋💋💋 I love you so much meri cute si princess 💕',
+          img: '/photos/mem2.jpeg',
+        },
+        {
+          text: 'Hamala sukoon wala pal jo hamne sath me bitaye 💋💋💋 har ek lamha meri yaadon me basa hua hai 🏖️',
+          img: '/photos/mem4.jpeg',
+        },
+      ].map((mem, idx) => (
+        <motion.div
+          key={idx}
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: idx * 0.2 }}
+          className="bg-pink-100/70 backdrop-blur-sm rounded-2xl shadow-lg p-3 hover:scale-[1.02] transition-all duration-300"
+        >
+          <div className="rounded-2xl overflow-hidden shadow-md">
+            <img
+              src={mem.img}
+              alt={`personal-memory-${idx}`}
+              className="w-full h-72 object-cover rounded-2xl"
+            />
+          </div>
+          <p className="text-center text-sm text-red-700 mt-2 italic font-medium">
+            {mem.text}
+          </p>
+        </motion.div>
+      ))}
+    </div>
+
+    <div className="flex gap-2 justify-between mt-6">
+      <button
+        onClick={() => setStep(7)}
+        className="bg-gray-200 text-gray-800 py-2 px-5 rounded-full hover:bg-gray-300 transition"
+      >
+        ⬅️ Back
+      </button>
+      <button
+        onClick={() => {
+          setStep(0);
+          setKissesCaught(0);
+          setGameStarted(false);
+          document.body.classList.remove('meli-night-sky');
+        }}
+        className="bg-pink-600 hover:bg-pink-700 text-white py-2 px-5 rounded-full transition"
+      >
+        Restart 💞
+      </button>
+    </div>
+  </motion.div>
+)}
+
       </AnimatePresence>
 
       {/* small floating CTA on bottom-right */}
